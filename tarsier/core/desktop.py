@@ -12,30 +12,41 @@ class Desktop:
         Opens an application and returns the main window element.
         """
         subprocess.Popen(executable)
-        time.sleep(2) # Wait for it to open (MVP hack)
         
-        # Try to find the window
-        if window_name:
-            window = auto.WindowControl(searchDepth=1, Name=window_name)
-        else:
-            # If no name given, just grab the active window after a short delay
-            time.sleep(1)
+        # If no name given, we have to fall back to a short sleep and getting foreground window
+        if not window_name:
+            time.sleep(2)
             window = auto.GetForegroundControl()
-            # find the top level window for this foreground control
             while window and window.GetParentControl() and window.GetParentControl().ControlTypeName != 'PaneControl':
-                 # Usually the desktop is a PaneControl, so we go up until we hit the top level window
                  parent = window.GetParentControl()
                  if parent.Name == 'Desktop 1':
                      break
                  window = parent
+            return UIElement(window)
             
-        if not window.Exists(3, 1):
-            raise Exception("Could not find the application window.")
-            
-        return UIElement(window)
+        # If name provided, use smart wait
+        return self.wait_for_window(name=window_name)
         
     def get_window(self, name: str) -> UIElement:
         window = auto.WindowControl(searchDepth=1, Name=name)
         if not window.Exists(3, 1):
             raise Exception(f"Could not find window with name: {name}")
+        return UIElement(window)
+        
+    def wait_for_window(self, name: str = None, regex_name: str = None, timeout: int = 10) -> UIElement:
+        """
+        Blocks execution until the specified window appears.
+        """
+        kwargs = {"searchDepth": 1}
+        if regex_name:
+            kwargs["RegexName"] = regex_name
+        elif name:
+            kwargs["Name"] = name
+        else:
+            raise ValueError("Must provide either name or regex_name")
+            
+        window = auto.WindowControl(**kwargs)
+        if not window.Exists(timeout, 1):
+            raise TimeoutError(f"Timed out waiting for window: {name or regex_name} after {timeout} seconds")
+            
         return UIElement(window)

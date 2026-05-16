@@ -94,6 +94,27 @@ class UIElement:
         
         raise ValueError(f"Element not found with name='{name}', role='{role}'")
 
+    def wait_for_element(self, role: Optional[str] = None, name: Optional[str] = None, timeout: int = 10) -> 'UIElement':
+        """Polls the DOM until the specified element appears."""
+        import time
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                return self.find(role=role, name=name)
+            except ValueError:
+                time.sleep(0.5)
+        raise TimeoutError(f"Timed out waiting for element with name='{name}', role='{role}' after {timeout} seconds")
+
+    def wait_until_clickable(self, timeout: int = 10) -> 'UIElement':
+        """Blocks until the element is enabled by the OS."""
+        import time
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            if self._control.IsEnabled:
+                return self
+            time.sleep(0.5)
+        raise TimeoutError(f"Timed out waiting for element to become clickable after {timeout} seconds")
+
     def button(self, name: str) -> 'UIElement':
         return self.find(role="button", name=name)
 
