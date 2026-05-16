@@ -49,10 +49,10 @@ Tarsier is currently built specifically for **Windows**. Support for macOS and L
 
 ## 📦 Installation
 
-You can install Tarsier directly from PyPI:
+You can install Tarsier directly from PyPI :
 
 ```bash
-pip install tarsier
+pip install tarsier-ai
 ```
 
 Alternatively, to install from source for development:
@@ -137,6 +137,33 @@ editor.type("Hello from Tarsier!")
 # Focus a specific element to ensure keystrokes land properly
 editor.focus()
 ```
+
+---
+
+## 🤖 AI Agent Integration (MCP)
+
+Tarsier comes with a built-in **Model Context Protocol (MCP)** server! This means you can plug Tarsier directly into AI agents like **Claude Desktop** or **Cursor** to let them autonomously control your Windows desktop using the semantic tools.
+
+### Available MCP Tools:
+* `desktop_open_app`: Launch or attach to a window.
+* `desktop_get_ui`: Dumps the JSON DOM for the AI to "see" the screen.
+* `desktop_click`: Semantically clicks an element.
+* `desktop_type`: Types text into an element.
+* `desktop_read_text`: Reads the internal text of a document or textbox.
+
+### Claude Desktop Integration:
+Simply add Tarsier to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "tarsier": {
+      "command": "tarsier-mcp"
+    }
+  }
+}
+```
+*(Note: Ensure the python environment where you installed Tarsier is accessible in your system PATH).*
 
 ---
 

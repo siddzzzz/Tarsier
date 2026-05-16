@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tarsier-ai"
+version = "0.1.0"
+authors = [
+  { name="siddzzzz" }
+]
+description = "Semantic Desktop Automation Framework for AI Agents via Windows UI Automation."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "uiautomation",
+    "mcp"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/siddzzzz/Tarsier"
+"Bug Tracker" = "https://github.com/siddzzzz/Tarsier/issues"
+
+[project.scripts]
+tarsier-mcp = "tarsier.mcp.server:main"
+
+[tool.setuptools]
+packages = ["tarsier", "tarsier.core", "tarsier.mcp"]

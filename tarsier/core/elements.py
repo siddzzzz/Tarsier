@@ -35,6 +35,32 @@ class UIElement:
         self._control.SendKeys('{Ctrl}v', waitTime=waitTime)
         return self
 
+    def read(self) -> str:
+        """Reads the text content of the element."""
+        # Try ValuePattern first (standard for edit boxes)
+        if hasattr(self._control, 'GetValuePattern'):
+            pattern = self._control.GetValuePattern()
+            if pattern:
+                try:
+                    return pattern.Value
+                except Exception:
+                    pass
+                    
+        # Try TextPattern next (used by complex documents)
+        if hasattr(self._control, 'GetTextPattern'):
+            pattern = self._control.GetTextPattern()
+            if pattern:
+                try:
+                    return pattern.DocumentRange.GetText(-1)
+                except Exception:
+                    pass
+        
+        # Fallback to Name or WindowText
+        text = self._control.GetWindowText()
+        if not text:
+            text = self.name
+        return text
+
     def find(self, role: Optional[str] = None, name: Optional[str] = None) -> 'UIElement':
         # Simple recursive search
         kwargs = {}
