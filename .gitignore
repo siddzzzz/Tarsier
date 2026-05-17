@@ -42,7 +42,13 @@ venv/
 .vscode/
 .idea/
 
-examples/
+#Personal use
 .env
 PUBLISHING.md
 publish-pypi.md
+
+
+
+#temp
+CITATION.cff 
+examples/
