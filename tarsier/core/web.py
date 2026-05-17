@@ -30,37 +30,38 @@ class WebElement:
 
     def type(self, text: str, waitTime: float = 0.05) -> 'WebElement':
         locator = self._locator.first
-        locator.fill("") # Clear first
-        locator.type(text)
+        locator.fill(text)
         return self
 
     def read(self) -> str:
         return self._locator.first.inner_text()
 
-    def find(self, role: Optional[str] = None, name: Optional[str] = None) -> 'WebElement':
+    def find(self, role: Optional[str] = None, name: Optional[str] = None, selector: Optional[str] = None) -> 'WebElement':
         loc = self._locator
-        if role and name:
+        if selector:
+            loc = loc.locator(selector)
+        elif role and name:
             loc = loc.get_by_role(role, name=name, exact=True)
         elif role:
             loc = loc.get_by_role(role)
         elif name:
             loc = loc.get_by_text(name, exact=True)
             
-        return WebElement(self.page, loc, role, name)
+        return WebElement(self.page, loc, role, name or selector)
 
-    def wait_for_element(self, role: Optional[str] = None, name: Optional[str] = None, timeout: int = 10) -> 'WebElement':
+    def wait_for_element(self, role: Optional[str] = None, name: Optional[str] = None, selector: Optional[str] = None, timeout: int = 10) -> 'WebElement':
         import time
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
-                el = self.find(role=role, name=name)
+                el = self.find(role=role, name=name, selector=selector)
                 # Ensure it actually exists in the DOM
                 if el._locator.first.count() > 0:
                     return el
             except Exception:
                 pass
             time.sleep(0.5)
-        raise TimeoutError(f"Timed out waiting for web element with name='{name}', role='{role}' after {timeout} seconds")
+        raise TimeoutError(f"Timed out waiting for web element with name='{name}', role='{role}', selector='{selector}' after {timeout} seconds")
 
     def wait_until_clickable(self, timeout: int = 10) -> 'WebElement':
         self._locator.first.wait_for(state="visible", timeout=timeout*1000)

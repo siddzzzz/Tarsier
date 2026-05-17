@@ -4,6 +4,7 @@ import os
 # Ensure tarsier is in the python path if run directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
+from typing import Optional
 from mcp.server.fastmcp import FastMCP
 from tarsier import Desktop
 
@@ -156,55 +157,58 @@ def web_get_ui() -> str:
         return f"Error getting Web UI: {e}"
 
 @mcp.tool()
-def web_click(role: str, name: str) -> str:
+def web_click(role: Optional[str] = None, name: Optional[str] = None, selector: Optional[str] = None) -> str:
     """
-    Semantically finds a UI element on the current web page and clicks it.
+    Finds a UI element on the current web page (semantically or via CSS selector) and clicks it.
     
     Args:
-        role: The semantic role of the element (e.g. 'button', 'link', 'checkbox').
-        name: The exact semantic name of the element (e.g. 'Search', 'Submit').
+        role: Optional semantic role of the element (e.g. 'button', 'link', 'checkbox').
+        name: Optional exact semantic name of the element (e.g. 'Search', 'Submit').
+        selector: Optional CSS/XPath selector fallback (e.g. '.shopping_cart_link') if element lacks clear semantic tags.
     """
     try:
         web = get_web()
         page = web.get_current_page()
-        element = page.wait_for_element(role=role, name=name, timeout=5)
+        element = page.wait_for_element(role=role, name=name, selector=selector, timeout=5)
         element.click()
-        return f"Successfully clicked the '{name}' {role}."
+        return f"Successfully clicked the element (role={role}, name={name}, selector={selector})."
     except Exception as e:
         return f"Error clicking web element: {e}"
 
 @mcp.tool()
-def web_type(role: str, name: str, text: str) -> str:
+def web_type(role: Optional[str] = None, name: Optional[str] = None, selector: Optional[str] = None, text: str = "") -> str:
     """
-    Semantically finds a textbox or input field on the web page and types text into it.
+    Finds a textbox or input field on the web page (semantically or via CSS selector) and types text into it.
     
     Args:
-        role: The semantic role of the element (e.g. 'textbox', 'searchbox').
-        name: The name of the element (optional if there's only one main input, but best to provide).
+        role: Optional semantic role of the element (e.g. 'textbox', 'searchbox').
+        name: Optional name of the element.
+        selector: Optional CSS/XPath selector fallback (e.g. '#search-input') if element lacks clear semantic tags.
         text: The text to type.
     """
     try:
         web = get_web()
         page = web.get_current_page()
-        element = page.wait_for_element(role=role, name=name, timeout=5)
+        element = page.wait_for_element(role=role, name=name, selector=selector, timeout=5)
         element.type(text)
-        return f"Successfully typed text into the '{name}' {role}."
+        return f"Successfully typed text into the element (role={role}, name={name}, selector={selector})."
     except Exception as e:
         return f"Error typing web text: {e}"
 
 @mcp.tool()
-def web_read_text(role: str, name: str) -> str:
+def web_read_text(role: Optional[str] = None, name: Optional[str] = None, selector: Optional[str] = None) -> str:
     """
-    Reads and returns the textual contents of a specific web element (like a paragraph or heading).
+    Reads and returns the textual contents of a specific web element (like a paragraph, heading, or generic container).
     
     Args:
-        role: The semantic role of the element (e.g. 'heading', 'main', 'article').
-        name: The exact semantic name of the element.
+        role: Optional semantic role of the element (e.g. 'heading', 'main', 'article').
+        name: Optional exact semantic name of the element.
+        selector: Optional CSS/XPath selector fallback (e.g. '.product-price') if element lacks clear semantic tags.
     """
     try:
         web = get_web()
         page = web.get_current_page()
-        element = page.wait_for_element(role=role, name=name, timeout=5)
+        element = page.wait_for_element(role=role, name=name, selector=selector, timeout=5)
         return element.read()
     except Exception as e:
         return f"Error reading web text: {e}"
