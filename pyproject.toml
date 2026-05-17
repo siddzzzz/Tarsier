@@ -20,7 +20,8 @@ classifiers = [
 ]
 dependencies = [
     "uiautomation",
-    "mcp"
+    "mcp",
+    "playwright"
 ]
 
 [project.urls]

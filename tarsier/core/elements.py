@@ -101,7 +101,7 @@ class UIElement:
         while time.time() - start_time < timeout:
             try:
                 return self.find(role=role, name=name)
-            except ValueError:
+            except Exception: # Catch COM errors, ElementNotAvailable, and ValueError
                 time.sleep(0.5)
         raise TimeoutError(f"Timed out waiting for element with name='{name}', role='{role}' after {timeout} seconds")
 
