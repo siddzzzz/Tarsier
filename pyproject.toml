@@ -19,9 +19,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "uiautomation",
-    "mcp",
-    "playwright"
+    "uiautomation>=2.0.29",
+    "mcp>=1.27.0",
+    "playwright>=1.59.0"
 ]
 
 [project.urls]
