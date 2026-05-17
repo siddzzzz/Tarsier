@@ -44,3 +44,5 @@ venv/
 
 examples/
 .env
+PUBLISHING.md
+publish-pypi.md
