@@ -96,10 +96,10 @@ class WebElement:
 
 
 class WebDesktop:
-    def __init__(self):
+    def __init__(self, headless: bool = False):
         from playwright.sync_api import sync_playwright
         self._pw = sync_playwright().start()
-        self.browser = self._pw.chromium.launch(headless=False)
+        self.browser = self._pw.chromium.launch(headless=headless)
         self.context = self.browser.new_context()
         self.page = self.context.new_page()
 
