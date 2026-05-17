@@ -26,6 +26,28 @@ class UIElement:
         self._control.SetFocus()
         return self
 
+    def scroll_into_view(self) -> 'UIElement':
+        """Scrolls the native Windows parent container until this element is visible."""
+        try:
+            # Try native UI Automation ScrollItemPattern
+            pattern = self._control.GetScrollItemPattern()
+            if pattern:
+                pattern.ScrollIntoView()
+                return self
+        except Exception:
+            pass
+        
+        # Fallback: In Windows, focusing an element forces the UI shell to scroll it into view!
+        self.focus()
+        return self
+
+    def scroll_to_bottom(self) -> 'UIElement':
+        """Scrolls to the bottom of the active document, pane, or container."""
+        self.focus()
+        # Sending Ctrl+End is the standard Windows gesture to jump to the absolute bottom of any scrollable area
+        self._control.SendKeys('{Ctrl}{End}')
+        return self
+
     def type(self, text: str, waitTime: float = 0.05) -> 'UIElement':
         # SendKeys types character-by-character, which can race and garble in modern UI like Win 11 Notepad.
         # A much more reliable method for semantic automation is pasting via clipboard or ValuePattern.

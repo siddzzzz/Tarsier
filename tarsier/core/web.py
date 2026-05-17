@@ -36,6 +36,16 @@ class WebElement:
     def read(self) -> str:
         return self._locator.first.inner_text()
 
+    def scroll_into_view(self) -> 'WebElement':
+        """Scrolls the browser window until this element is visible."""
+        self._locator.first.scroll_into_view_if_needed()
+        return self
+
+    def scroll_to_bottom(self) -> 'WebElement':
+        """Scrolls the browser window to the absolute bottom of the page."""
+        self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        return self
+
     def find(self, role: Optional[str] = None, name: Optional[str] = None, selector: Optional[str] = None) -> 'WebElement':
         loc = self._locator
         if selector:
