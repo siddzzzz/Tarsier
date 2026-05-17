@@ -8,8 +8,17 @@ from mcp.server.fastmcp import FastMCP
 from tarsier import Desktop
 
 # Initialize FastMCP Server
-mcp = FastMCP("Tarsier Desktop Automation")
+mcp = FastMCP("Tarsier Automation")
 desktop = Desktop()
+web_desktop = None
+
+def get_web(headless: bool = False):
+    """Lazy loads the WebDesktop so Chromium isn't started unless requested."""
+    global web_desktop
+    if not web_desktop:
+        from tarsier import WebDesktop
+        web_desktop = WebDesktop(headless=headless)
+    return web_desktop
 
 @mcp.tool()
 def desktop_open_app(executable: str, window_name: str = None) -> str:
@@ -96,6 +105,109 @@ def desktop_read_text(window_name: str, role: str, name: str) -> str:
         return content
     except Exception as e:
         return f"Error reading text: {e}"
+
+# ==========================================
+# WEB AUTOMATION TOOLS
+# ==========================================
+
+@mcp.tool()
+def web_start_browser(headless: bool = False) -> str:
+    """
+    Starts the Playwright Chromium browser session.
+    You usually don't need to call this manually unless you specifically want to start it in headless mode,
+    as other web_ tools will auto-start it in non-headless mode if not already running.
+    
+    Args:
+        headless: If True, the browser runs invisibly in the background. Defaults to False so the user can see.
+    """
+    try:
+        get_web(headless=headless)
+        mode = "headless" if headless else "visible"
+        return f"Successfully started web browser in {mode} mode."
+    except Exception as e:
+        return f"Error starting browser: {e}"
+
+@mcp.tool()
+def web_goto(url: str) -> str:
+    """
+    Navigates the web browser to a specific URL.
+    
+    Args:
+        url: The URL to navigate to (e.g., 'https://en.wikipedia.org/wiki/Main_Page')
+    """
+    try:
+        web = get_web()
+        page = web.goto(url)
+        return f"Successfully navigated to {url}. Page title: '{page.name}'"
+    except Exception as e:
+        return f"Error navigating: {e}"
+
+@mcp.tool()
+def web_get_ui() -> str:
+    """
+    Retrieves the semantic UI tree (Web DOM) for the current web page.
+    This returns a YAML string representing the accessibility tree (ARIA snapshot).
+    """
+    try:
+        web = get_web()
+        page = web.get_current_page()
+        return page.to_json()
+    except Exception as e:
+        return f"Error getting Web UI: {e}"
+
+@mcp.tool()
+def web_click(role: str, name: str) -> str:
+    """
+    Semantically finds a UI element on the current web page and clicks it.
+    
+    Args:
+        role: The semantic role of the element (e.g. 'button', 'link', 'checkbox').
+        name: The exact semantic name of the element (e.g. 'Search', 'Submit').
+    """
+    try:
+        web = get_web()
+        page = web.get_current_page()
+        element = page.wait_for_element(role=role, name=name, timeout=5)
+        element.click()
+        return f"Successfully clicked the '{name}' {role}."
+    except Exception as e:
+        return f"Error clicking web element: {e}"
+
+@mcp.tool()
+def web_type(role: str, name: str, text: str) -> str:
+    """
+    Semantically finds a textbox or input field on the web page and types text into it.
+    
+    Args:
+        role: The semantic role of the element (e.g. 'textbox', 'searchbox').
+        name: The name of the element (optional if there's only one main input, but best to provide).
+        text: The text to type.
+    """
+    try:
+        web = get_web()
+        page = web.get_current_page()
+        element = page.wait_for_element(role=role, name=name, timeout=5)
+        element.type(text)
+        return f"Successfully typed text into the '{name}' {role}."
+    except Exception as e:
+        return f"Error typing web text: {e}"
+
+@mcp.tool()
+def web_read_text(role: str, name: str) -> str:
+    """
+    Reads and returns the textual contents of a specific web element (like a paragraph or heading).
+    
+    Args:
+        role: The semantic role of the element (e.g. 'heading', 'main', 'article').
+        name: The exact semantic name of the element.
+    """
+    try:
+        web = get_web()
+        page = web.get_current_page()
+        element = page.wait_for_element(role=role, name=name, timeout=5)
+        return element.read()
+    except Exception as e:
+        return f"Error reading web text: {e}"
 
 def main():
     """Starts the stdio MCP server."""
