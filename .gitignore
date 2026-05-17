@@ -45,9 +45,8 @@ venv/
 #Personal use
 .env
 PUBLISHING.md
-publish-pypi.md
-
-
+handoff.md
+examples/test_install.py
 
 #temp
 CITATION.cff 
