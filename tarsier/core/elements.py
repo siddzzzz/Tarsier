@@ -162,5 +162,37 @@ class UIElement:
                 
         return data
 
+    def to_yaml_snapshot(self, max_depth: int = 5) -> str:
+        """
+        Dumps the UI tree into a Playwright ARIA snapshot compatible YAML string.
+        This provides a highly token-efficient, unified standard for LLM agents.
+        """
+        lines = []
+        self._to_yaml_recursive(self._control, 0, max_depth, lines)
+        return "\n".join(lines)
+        
+    def _to_yaml_recursive(self, control, depth: int, max_depth: int, lines: List[str]):
+        role = control.ControlTypeName.replace("Control", "").lower() or "unknown"
+        name = control.Name
+        
+        # Format like aria snapshot: - role "name":
+        indent = "  " * depth
+        line = f"{indent}- {role}"
+        if name:
+            # Safely escape quotes in name
+            safe_name = name.replace('"', '\\"')
+            line += f' "{safe_name}"'
+            
+        children = control.GetChildren()
+        
+        # Don't add colon if no children are being processed
+        if children and depth < max_depth:
+            line += ":"
+            lines.append(line)
+            for child in children:
+                self._to_yaml_recursive(child, depth + 1, max_depth, lines)
+        else:
+            lines.append(line)
+
     def to_json(self) -> str:
         return json.dumps(self.dump_ui(), indent=2)

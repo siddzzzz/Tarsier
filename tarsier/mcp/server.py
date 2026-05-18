@@ -47,7 +47,7 @@ def desktop_get_ui(window_name: str) -> str:
     """
     try:
         window = desktop.get_window(window_name)
-        return window.to_json()
+        return window.to_yaml_snapshot()
     except Exception as e:
         return f"Error getting UI: {e}"
 
