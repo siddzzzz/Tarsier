@@ -108,6 +108,41 @@ def desktop_read_text(window_name: str, role: str, name: str) -> str:
         return f"Error reading text: {e}"
 
 @mcp.tool()
+def desktop_hotkey(keys: str) -> str:
+    """
+    Sends a global OS keyboard shortcut or hotkey.
+    
+    Args:
+        keys: The hotkey string to send (e.g., '{Ctrl}c', '{Alt}{Tab}', '{LWin}r').
+    """
+    try:
+        desktop.hotkey(keys)
+        return f"Successfully sent hotkey: {keys}"
+    except Exception as e:
+        return f"Error sending hotkey: {e}"
+
+@mcp.tool()
+def desktop_drag_and_drop(window_name: str, source_role: str, source_name: str, target_role: str, target_name: str) -> str:
+    """
+    Semantically finds a source element and drags it to a target element.
+    
+    Args:
+        window_name: The name of the window containing the elements.
+        source_role: The role of the element to drag.
+        source_name: The name of the element to drag.
+        target_role: The role of the destination element.
+        target_name: The name of the destination element.
+    """
+    try:
+        window = desktop.get_window(window_name)
+        source_element = window.find(role=source_role, name=source_name)
+        target_element = window.find(role=target_role, name=target_name)
+        source_element.drag_to(target_element)
+        return f"Successfully dragged '{source_name}' to '{target_name}'."
+    except Exception as e:
+        return f"Error dragging and dropping: {e}"
+
+@mcp.tool()
 def desktop_manage_window(window_name: str, action: str, x: int = None, y: int = None, width: int = None, height: int = None) -> str:
     """
     Manages and manipulates an entire Desktop window.

@@ -66,6 +66,29 @@ class UIElement:
         self._control.SetFocus()
         return self
 
+    def drag_to(self, target: 'UIElement', move_speed: int = 1, wait_time: float = 0.5) -> 'UIElement':
+        """Drags the current element to the center of the target element."""
+        import uiautomation as auto
+        start_rect = self._control.BoundingRectangle
+        end_rect = target._control.BoundingRectangle
+        
+        start_x = (start_rect.left + start_rect.right) // 2
+        start_y = (start_rect.top + start_rect.bottom) // 2
+        
+        end_x = (end_rect.left + end_rect.right) // 2
+        end_y = (end_rect.top + end_rect.bottom) // 2
+        
+        self._highlight()
+        target._highlight()
+        
+        # Explicitly move the mouse to the start position so it's visually clear
+        auto.MoveTo(start_x, start_y)
+        import time
+        time.sleep(0.5)
+        
+        auto.DragDrop(start_x, start_y, end_x, end_y, moveSpeed=move_speed, waitTime=wait_time)
+        return self
+
     def move(self, x: int, y: int) -> 'UIElement':
         """Moves the window or element to physical screen coordinates."""
         if hasattr(self._control, 'GetTransformPattern'):

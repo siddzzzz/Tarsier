@@ -56,3 +56,11 @@ class Desktop:
             raise TimeoutError(f"Timed out waiting for window: {name or regex_name} after {timeout} seconds")
             
         return UIElement(window, highlight_actions=self.highlight_actions)
+
+    def hotkey(self, keys: str, waitTime: float = 0.05) -> 'Desktop':
+        """
+        Sends a global OS hotkey combination.
+        Supports standard modifiers like {Ctrl}c, {Alt}{Tab}, {Win}d, etc.
+        """
+        auto.SendKeys(keys, waitTime=waitTime)
+        return self
