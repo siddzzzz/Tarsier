@@ -2,11 +2,12 @@ import json
 from typing import List, Dict, Any, Optional
 
 class WebElement:
-    def __init__(self, page, locator=None, role="document", name=""):
+    def __init__(self, page, locator=None, role="document", name="", highlight_actions: bool = False):
         self.page = page
         self._locator = locator or page.locator("body")
         self._role = role
         self._name = name
+        self.highlight_actions = highlight_actions
 
     @property
     def name(self) -> str:
@@ -16,19 +17,46 @@ class WebElement:
     def role(self) -> str:
         return self._role
 
+    def _highlight(self):
+        """Visually flashes the element on screen to help humans debug automation."""
+        if not getattr(self, 'highlight_actions', False):
+            return
+            
+        try:
+            # Inject a red box shadow temporarily using Playwright evaluate
+            locator = self._locator.first
+            locator.evaluate("""el => {
+                const oldShadow = el.style.boxShadow;
+                const oldTransition = el.style.transition;
+                el.style.transition = 'box-shadow 0.1s';
+                el.style.boxShadow = '0 0 0 5px rgba(255, 0, 0, 0.8)';
+                setTimeout(() => {
+                    el.style.boxShadow = oldShadow;
+                    el.style.transition = oldTransition;
+                }, 400);
+            }""")
+            import time
+            time.sleep(0.1) # brief pause to let human see it before action
+        except Exception:
+            pass
+
     def click(self) -> 'WebElement':
+        self._highlight()
         self._locator.first.click()
         return self
     
     def double_click(self) -> 'WebElement':
+        self._highlight()
         self._locator.first.dblclick()
         return self
 
     def focus(self) -> 'WebElement':
+        self._highlight()
         self._locator.first.focus()
         return self
 
     def type(self, text: str, waitTime: float = 0.05) -> 'WebElement':
+        self._highlight()
         locator = self._locator.first
         locator.fill(text)
         return self
@@ -57,7 +85,7 @@ class WebElement:
         elif name:
             loc = loc.get_by_text(name, exact=True)
             
-        return WebElement(self.page, loc, role, name or selector)
+        return WebElement(self.page, loc, role, name or selector, highlight_actions=self.highlight_actions)
 
     def wait_for_element(self, role: Optional[str] = None, name: Optional[str] = None, selector: Optional[str] = None, timeout: int = 10) -> 'WebElement':
         import time
@@ -107,12 +135,13 @@ class WebElement:
 
 
 class WebDesktop:
-    def __init__(self, headless: bool = False):
+    def __init__(self, headless: bool = False, highlight_actions: bool = False):
         from playwright.sync_api import sync_playwright
         self._pw = sync_playwright().start()
         self.browser = self._pw.chromium.launch(headless=headless)
         self.context = self.browser.new_context()
         self.page = self.context.new_page()
+        self.highlight_actions = highlight_actions
 
     def goto(self, url: str) -> WebElement:
         self.page.goto(url)
@@ -120,10 +149,10 @@ class WebDesktop:
             self.page.wait_for_load_state('networkidle', timeout=5000)
         except Exception:
             pass
-        return WebElement(self.page)
+        return WebElement(self.page, highlight_actions=self.highlight_actions)
         
     def get_current_page(self) -> WebElement:
-        return WebElement(self.page)
+        return WebElement(self.page, highlight_actions=self.highlight_actions)
 
     def close(self):
         self.browser.close()
