@@ -13,14 +13,14 @@ class Desktop:
         except Exception:
             pass
 
-    def open_app(self, executable: str, window_name: str = None) -> UIElement:
+    def open_app(self, executable: str, window_name: str = None, regex_name: str = None) -> UIElement:
         """
         Opens an application and returns the main window element.
         """
         subprocess.Popen(executable)
         
-        # If no name given, we have to fall back to a short sleep and getting foreground window
-        if not window_name:
+        # If neither name nor regex_name given, we have to fall back to a short sleep and getting foreground window
+        if not window_name and not regex_name:
             time.sleep(2)
             window = auto.GetForegroundControl()
             while window and window.GetParentControl() and window.GetParentControl().ControlTypeName != 'PaneControl':
@@ -30,8 +30,8 @@ class Desktop:
                  window = parent
             return UIElement(window, highlight_actions=self.highlight_actions)
             
-        # If name provided, use smart wait
-        return self.wait_for_window(name=window_name)
+        # If name or regex provided, use smart wait
+        return self.wait_for_window(name=window_name, regex_name=regex_name)
         
     def get_window(self, name: str) -> UIElement:
         window = auto.WindowControl(searchDepth=1, Name=name)

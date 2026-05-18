@@ -252,7 +252,10 @@ class UIElement:
         return self.find(role="button", name=name)
 
     def textbox(self, name: Optional[str] = None) -> 'UIElement':
-        return self.find(role="document", name=name) or self.find(role="edit", name=name)
+        try:
+            return self.find(role="document", name=name)
+        except ValueError:
+            return self.find(role="edit", name=name)
         
     def menu(self, name: str) -> 'UIElement':
         return self.find(role="menuitem", name=name)

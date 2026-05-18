@@ -74,16 +74,16 @@ class WebElement:
         self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
         return self
 
-    def find(self, role: Optional[str] = None, name: Optional[str] = None, selector: Optional[str] = None) -> 'WebElement':
+    def find(self, role: Optional[str] = None, name: Optional[str] = None, selector: Optional[str] = None, exact: bool = False) -> 'WebElement':
         loc = self._locator
         if selector:
             loc = loc.locator(selector)
         elif role and name:
-            loc = loc.get_by_role(role, name=name, exact=True)
+            loc = loc.get_by_role(role, name=name, exact=exact)
         elif role:
             loc = loc.get_by_role(role)
         elif name:
-            loc = loc.get_by_text(name, exact=True)
+            loc = loc.get_by_text(name, exact=exact)
             
         return WebElement(self.page, loc, role, name or selector, highlight_actions=self.highlight_actions)
 
@@ -109,7 +109,13 @@ class WebElement:
         return self.find(role="button", name=name)
 
     def textbox(self, name: Optional[str] = None) -> 'WebElement':
-        return self.find(role="textbox", name=name)
+        tb = self.find(role="textbox", name=name)
+        try:
+            if tb._locator.first.count() > 0:
+                return tb
+        except Exception:
+            pass
+        return self.find(role="searchbox", name=name)
         
     def menu(self, name: str) -> 'WebElement':
         return self.find(role="menuitem", name=name)
