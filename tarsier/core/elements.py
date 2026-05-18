@@ -2,9 +2,10 @@ import json
 from typing import List, Dict, Any, Optional
 
 class UIElement:
-    def __init__(self, control):
+    def __init__(self, control, highlight_actions: bool = False):
         # control is a uiautomation.Control
         self._control = control
+        self.highlight_actions = highlight_actions
 
     @property
     def name(self) -> str:
@@ -16,7 +17,8 @@ class UIElement:
 
     def _highlight(self):
         """Draws a temporary red rectangle around the control on screen using Windows GDI."""
-        # Check if highlighting is disabled globally (we can check a flag on the module if needed)
+        if not getattr(self, 'highlight_actions', False):
+            return
         try:
             rect = self._control.BoundingRectangle
             if rect.left >= rect.right or rect.top >= rect.bottom:
@@ -33,15 +35,19 @@ class UIElement:
             brush = gdi32.GetStockObject(5) # NULL_BRUSH
             old_brush = gdi32.SelectObject(hdc, brush)
             
-            # Flash it a few times or draw it for 0.3s
+            # Flash it a few times
             for _ in range(3):
-                gdi32.Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom)
-                time.sleep(0.05)
+                # Draw slightly inset to avoid being clipped by invisible UWP window borders
+                gdi32.Rectangle(hdc, rect.left + 2, rect.top + 2, rect.right - 2, rect.bottom - 2)
+                time.sleep(0.08)
                 
             gdi32.SelectObject(hdc, old_pen)
             gdi32.SelectObject(hdc, old_brush)
             gdi32.DeleteObject(pen)
             user32.ReleaseDC(0, hdc)
+            
+            # Force the OS to repaint the screen to erase the red rectangle
+            user32.InvalidateRect(None, None, True)
         except Exception:
             pass
 
@@ -58,6 +64,54 @@ class UIElement:
     def focus(self) -> 'UIElement':
         self._highlight()
         self._control.SetFocus()
+        return self
+
+    def move(self, x: int, y: int) -> 'UIElement':
+        """Moves the window or element to physical screen coordinates."""
+        if hasattr(self._control, 'GetTransformPattern'):
+            pattern = self._control.GetTransformPattern()
+            if pattern and pattern.CanMove:
+                pattern.Move(x, y)
+        return self
+
+    def resize(self, width: int, height: int) -> 'UIElement':
+        """Resizes the window or element."""
+        if hasattr(self._control, 'GetTransformPattern'):
+            pattern = self._control.GetTransformPattern()
+            if pattern and pattern.CanResize:
+                pattern.Resize(width, height)
+        return self
+
+    def maximize(self) -> 'UIElement':
+        """Maximizes the window."""
+        if hasattr(self._control, 'GetWindowPattern'):
+            pattern = self._control.GetWindowPattern()
+            if pattern:
+                pattern.SetWindowVisualState(1) # 1 = Maximized
+        return self
+
+    def minimize(self) -> 'UIElement':
+        """Minimizes the window."""
+        if hasattr(self._control, 'GetWindowPattern'):
+            pattern = self._control.GetWindowPattern()
+            if pattern:
+                pattern.SetWindowVisualState(2) # 2 = Minimized
+        return self
+
+    def restore(self) -> 'UIElement':
+        """Restores the window to its normal state."""
+        if hasattr(self._control, 'GetWindowPattern'):
+            pattern = self._control.GetWindowPattern()
+            if pattern:
+                pattern.SetWindowVisualState(0) # 0 = Normal
+        return self
+
+    def close(self) -> 'UIElement':
+        """Closes the window."""
+        if hasattr(self._control, 'GetWindowPattern'):
+            pattern = self._control.GetWindowPattern()
+            if pattern:
+                pattern.Close()
         return self
 
     def scroll_into_view(self) -> 'UIElement':
@@ -146,7 +200,7 @@ class UIElement:
                 if role.lower() not in child.ControlTypeName.lower():
                     match = False
             if match:
-                return UIElement(child)
+                return UIElement(child, highlight_actions=getattr(self, 'highlight_actions', False))
         
         raise ValueError(f"Element not found with name='{name}', role='{role}'")
 

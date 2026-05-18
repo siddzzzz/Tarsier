@@ -107,6 +107,45 @@ def desktop_read_text(window_name: str, role: str, name: str) -> str:
     except Exception as e:
         return f"Error reading text: {e}"
 
+@mcp.tool()
+def desktop_manage_window(window_name: str, action: str, x: int = None, y: int = None, width: int = None, height: int = None) -> str:
+    """
+    Manages and manipulates an entire Desktop window.
+    
+    Args:
+        window_name: The name of the window to manage.
+        action: The action to perform. Must be one of: 'maximize', 'minimize', 'restore', 'close', 'move', 'resize'.
+        x: The X coordinate (required if action is 'move').
+        y: The Y coordinate (required if action is 'move').
+        width: The new width (required if action is 'resize').
+        height: The new height (required if action is 'resize').
+    """
+    try:
+        window = desktop.get_window(window_name)
+        action = action.lower()
+        if action == 'maximize':
+            window.maximize()
+        elif action == 'minimize':
+            window.minimize()
+        elif action == 'restore':
+            window.restore()
+        elif action == 'close':
+            window.close()
+        elif action == 'move':
+            if x is None or y is None:
+                return "Error: x and y must be provided for 'move' action."
+            window.move(x, y)
+        elif action == 'resize':
+            if width is None or height is None:
+                return "Error: width and height must be provided for 'resize' action."
+            window.resize(width, height)
+        else:
+            return f"Error: Unknown action '{action}'"
+            
+        return f"Successfully performed '{action}' on window '{window_name}'."
+    except Exception as e:
+        return f"Error managing window: {e}"
+
 # ==========================================
 # WEB AUTOMATION TOOLS
 # ==========================================

@@ -2,11 +2,12 @@ import json
 from typing import List, Dict, Any, Optional
 
 class WebElement:
-    def __init__(self, page, locator=None, role="document", name=""):
+    def __init__(self, page, locator=None, role="document", name="", highlight_actions: bool = False):
         self.page = page
         self._locator = locator or page.locator("body")
         self._role = role
         self._name = name
+        self.highlight_actions = highlight_actions
 
     @property
     def name(self) -> str:
@@ -18,7 +19,7 @@ class WebElement:
 
     def _highlight(self):
         """Visually flashes the element on screen to help humans debug automation."""
-        if hasattr(self.page, "_highlight_enabled") and not self.page._highlight_enabled:
+        if not getattr(self, 'highlight_actions', False):
             return
             
         try:
@@ -84,7 +85,7 @@ class WebElement:
         elif name:
             loc = loc.get_by_text(name, exact=True)
             
-        return WebElement(self.page, loc, role, name or selector)
+        return WebElement(self.page, loc, role, name or selector, highlight_actions=self.highlight_actions)
 
     def wait_for_element(self, role: Optional[str] = None, name: Optional[str] = None, selector: Optional[str] = None, timeout: int = 10) -> 'WebElement':
         import time
@@ -134,12 +135,13 @@ class WebElement:
 
 
 class WebDesktop:
-    def __init__(self, headless: bool = False):
+    def __init__(self, headless: bool = False, highlight_actions: bool = False):
         from playwright.sync_api import sync_playwright
         self._pw = sync_playwright().start()
         self.browser = self._pw.chromium.launch(headless=headless)
         self.context = self.browser.new_context()
         self.page = self.context.new_page()
+        self.highlight_actions = highlight_actions
 
     def goto(self, url: str) -> WebElement:
         self.page.goto(url)
@@ -147,10 +149,10 @@ class WebDesktop:
             self.page.wait_for_load_state('networkidle', timeout=5000)
         except Exception:
             pass
-        return WebElement(self.page)
+        return WebElement(self.page, highlight_actions=self.highlight_actions)
         
     def get_current_page(self) -> WebElement:
-        return WebElement(self.page)
+        return WebElement(self.page, highlight_actions=self.highlight_actions)
 
     def close(self):
         self.browser.close()
