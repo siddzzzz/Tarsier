@@ -4,8 +4,14 @@ import uiautomation as auto
 from tarsier.core.elements import UIElement
 
 class Desktop:
-    def __init__(self):
-        pass
+    def __init__(self, highlight_actions: bool = False):
+        self.highlight_actions = highlight_actions
+        # Make the process DPI aware so that GDI coordinates match uiautomation coordinates!
+        try:
+            import ctypes
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
 
     def open_app(self, executable: str, window_name: str = None) -> UIElement:
         """
@@ -22,7 +28,7 @@ class Desktop:
                  if parent.Name == 'Desktop 1':
                      break
                  window = parent
-            return UIElement(window)
+            return UIElement(window, highlight_actions=self.highlight_actions)
             
         # If name provided, use smart wait
         return self.wait_for_window(name=window_name)
@@ -31,7 +37,7 @@ class Desktop:
         window = auto.WindowControl(searchDepth=1, Name=name)
         if not window.Exists(3, 1):
             raise Exception(f"Could not find window with name: {name}")
-        return UIElement(window)
+        return UIElement(window, highlight_actions=self.highlight_actions)
         
     def wait_for_window(self, name: str = None, regex_name: str = None, timeout: int = 10) -> UIElement:
         """
@@ -49,4 +55,4 @@ class Desktop:
         if not window.Exists(timeout, 1):
             raise TimeoutError(f"Timed out waiting for window: {name or regex_name} after {timeout} seconds")
             
-        return UIElement(window)
+        return UIElement(window, highlight_actions=self.highlight_actions)
