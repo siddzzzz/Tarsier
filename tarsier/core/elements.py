@@ -14,15 +14,49 @@ class UIElement:
     def role(self) -> str:
         return self._control.ControlTypeName
 
+    def _highlight(self):
+        """Draws a temporary red rectangle around the control on screen using Windows GDI."""
+        # Check if highlighting is disabled globally (we can check a flag on the module if needed)
+        try:
+            rect = self._control.BoundingRectangle
+            if rect.left >= rect.right or rect.top >= rect.bottom:
+                return
+                
+            import ctypes
+            import time
+            user32 = ctypes.windll.user32
+            gdi32 = ctypes.windll.gdi32
+            
+            hdc = user32.GetDC(0)
+            pen = gdi32.CreatePen(0, 4, 0x0000FF) # Red border, width 4
+            old_pen = gdi32.SelectObject(hdc, pen)
+            brush = gdi32.GetStockObject(5) # NULL_BRUSH
+            old_brush = gdi32.SelectObject(hdc, brush)
+            
+            # Flash it a few times or draw it for 0.3s
+            for _ in range(3):
+                gdi32.Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom)
+                time.sleep(0.05)
+                
+            gdi32.SelectObject(hdc, old_pen)
+            gdi32.SelectObject(hdc, old_brush)
+            gdi32.DeleteObject(pen)
+            user32.ReleaseDC(0, hdc)
+        except Exception:
+            pass
+
     def click(self) -> 'UIElement':
+        self._highlight()
         self._control.Click()
         return self
     
     def double_click(self) -> 'UIElement':
+        self._highlight()
         self._control.DoubleClick()
         return self
 
     def focus(self) -> 'UIElement':
+        self._highlight()
         self._control.SetFocus()
         return self
 

@@ -16,19 +16,46 @@ class WebElement:
     def role(self) -> str:
         return self._role
 
+    def _highlight(self):
+        """Visually flashes the element on screen to help humans debug automation."""
+        if hasattr(self.page, "_highlight_enabled") and not self.page._highlight_enabled:
+            return
+            
+        try:
+            # Inject a red box shadow temporarily using Playwright evaluate
+            locator = self._locator.first
+            locator.evaluate("""el => {
+                const oldShadow = el.style.boxShadow;
+                const oldTransition = el.style.transition;
+                el.style.transition = 'box-shadow 0.1s';
+                el.style.boxShadow = '0 0 0 5px rgba(255, 0, 0, 0.8)';
+                setTimeout(() => {
+                    el.style.boxShadow = oldShadow;
+                    el.style.transition = oldTransition;
+                }, 400);
+            }""")
+            import time
+            time.sleep(0.1) # brief pause to let human see it before action
+        except Exception:
+            pass
+
     def click(self) -> 'WebElement':
+        self._highlight()
         self._locator.first.click()
         return self
     
     def double_click(self) -> 'WebElement':
+        self._highlight()
         self._locator.first.dblclick()
         return self
 
     def focus(self) -> 'WebElement':
+        self._highlight()
         self._locator.first.focus()
         return self
 
     def type(self, text: str, waitTime: float = 0.05) -> 'WebElement':
+        self._highlight()
         locator = self._locator.first
         locator.fill(text)
         return self
