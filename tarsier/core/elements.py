@@ -208,30 +208,18 @@ class UIElement:
             text = self.name
         return text
 
-    def find(self, role: Optional[str] = None, name: Optional[str] = None) -> 'UIElement':
-        # Simple recursive search
-        kwargs = {}
-        if name is not None:
-            kwargs["Name"] = name
-        if role is not None:
-            # Need to map to uiautomation ControlType or use generic search
-            # uiautomation uses specific classes like ButtonControl, etc.
-            # But we can also use Control.GetChildren() and filter
-            pass
-            
+    def find(self, role: Optional[str] = None, name: Optional[str] = None, regex_name: Optional[str] = None) -> 'UIElement':
         import uiautomation as auto
-        search_control = auto.Control(searchFromControl=self._control, searchDepth=0xFFFFFFFF, **kwargs)
-        if role:
-             # Just an MVP simplification, filtering by name and returning first match if role matches, 
-             # uiautomation's search handles Name easily. 
-             # For a robust MVP we use the built in search:
-             pass
+        import re
         
         # Proper MVP search
         for child, depth, _ in auto.WalkTree(self._control, getChildren=lambda c: c.GetChildren(), includeTop=False):
             match = True
             if name is not None and child.Name != name:
                 match = False
+            if regex_name is not None:
+                if not child.Name or not re.match(regex_name, child.Name):
+                    match = False
             if role is not None:
                 # Basic role matching based on ControlTypeName (e.g. 'ButtonControl' -> 'button')
                 if role.lower() not in child.ControlTypeName.lower():
@@ -239,18 +227,18 @@ class UIElement:
             if match:
                 return UIElement(child, highlight_actions=getattr(self, 'highlight_actions', False))
         
-        raise ValueError(f"Element not found with name='{name}', role='{role}'")
+        raise ValueError(f"Element not found with name='{name}', regex_name='{regex_name}', role='{role}'")
 
-    def wait_for_element(self, role: Optional[str] = None, name: Optional[str] = None, timeout: int = 10) -> 'UIElement':
+    def wait_for_element(self, role: Optional[str] = None, name: Optional[str] = None, regex_name: Optional[str] = None, timeout: int = 10) -> 'UIElement':
         """Polls the DOM until the specified element appears."""
         import time
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
-                return self.find(role=role, name=name)
+                return self.find(role=role, name=name, regex_name=regex_name)
             except Exception: # Catch COM errors, ElementNotAvailable, and ValueError
                 time.sleep(0.5)
-        raise TimeoutError(f"Timed out waiting for element with name='{name}', role='{role}' after {timeout} seconds")
+        raise TimeoutError(f"Timed out waiting for element with name='{name}', regex_name='{regex_name}', role='{role}' after {timeout} seconds")
 
     def wait_until_clickable(self, timeout: int = 10) -> 'UIElement':
         """Blocks until the element is enabled by the OS."""
