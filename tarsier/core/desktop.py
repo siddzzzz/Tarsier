@@ -64,3 +64,31 @@ class Desktop:
         """
         auto.SendKeys(keys, waitTime=waitTime)
         return self
+
+    def drag_and_drop_coordinates(self, start_x: int, start_y: int, end_x: int, end_y: int, move_speed: int = 1, wait_time: float = 0.5) -> 'Desktop':
+        """
+        Drags from physical screen coordinates (start_x, start_y) to (end_x, end_y).
+        """
+        auto.MoveTo(start_x, start_y)
+        time.sleep(0.2)
+        auto.DragDrop(start_x, start_y, end_x, end_y, moveSpeed=move_speed, waitTime=wait_time)
+        return self
+
+    def drag_and_drop(self, source_element: UIElement, target_element: UIElement, move_speed: int = 1, wait_time: float = 0.5) -> 'Desktop':
+        """
+        Drags from the center of source_element to the center of target_element.
+        """
+        start_rect = source_element._control.BoundingRectangle
+        end_rect = target_element._control.BoundingRectangle
+        
+        start_x = (start_rect.left + start_rect.right) // 2
+        start_y = (start_rect.top + start_rect.bottom) // 2
+        
+        end_x = (end_rect.left + end_rect.right) // 2
+        end_y = (end_rect.top + end_rect.bottom) // 2
+        
+        if getattr(source_element, 'highlight_actions', False):
+            source_element._highlight()
+            target_element._highlight()
+            
+        return self.drag_and_drop_coordinates(start_x, start_y, end_x, end_y, move_speed=move_speed, wait_time=wait_time)

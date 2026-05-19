@@ -61,6 +61,20 @@ class UIElement:
         self._control.DoubleClick()
         return self
 
+    def right_click(self) -> 'UIElement':
+        self._highlight()
+        self._control.RightClick()
+        return self
+
+    def hover(self) -> 'UIElement':
+        self._highlight()
+        rect = self._control.BoundingRectangle
+        x = (rect.left + rect.right) // 2
+        y = (rect.top + rect.bottom) // 2
+        import uiautomation as auto
+        auto.MoveTo(x, y)
+        return self
+
     def focus(self) -> 'UIElement':
         self._highlight()
         self._control.SetFocus()
