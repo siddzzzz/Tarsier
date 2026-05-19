@@ -1,0 +1,5 @@
+--- SCRAPED WIKIPEDIA CONTENT ---
+This page always uses small font size
+
+Generated dynamically by Tarsier!Hello from Tarsier!
+This is a semantic automation test.
