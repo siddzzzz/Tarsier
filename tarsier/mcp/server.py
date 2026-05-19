@@ -70,6 +70,42 @@ def desktop_click(window_name: str, role: str, name: str) -> str:
         return f"Error clicking element: {e}"
 
 @mcp.tool()
+def desktop_right_click(window_name: str, role: str, name: str) -> str:
+    """
+    Semantically finds a UI element inside a window and right-clicks it.
+    
+    Args:
+        window_name: The name of the window containing the element.
+        role: The semantic role of the element (e.g. 'button', 'menuitem', 'tab').
+        name: The exact semantic name of the element (e.g. 'Save', 'File').
+    """
+    try:
+        window = desktop.get_window(window_name)
+        element = window.find(role=role, name=name)
+        element.right_click()
+        return f"Successfully right-clicked the '{name}' {role}."
+    except Exception as e:
+        return f"Error right-clicking element: {e}"
+
+@mcp.tool()
+def desktop_hover(window_name: str, role: str, name: str) -> str:
+    """
+    Semantically finds a UI element inside a window and hovers the mouse cursor over it.
+    
+    Args:
+        window_name: The name of the window containing the element.
+        role: The semantic role of the element.
+        name: The exact semantic name of the element.
+    """
+    try:
+        window = desktop.get_window(window_name)
+        element = window.find(role=role, name=name)
+        element.hover()
+        return f"Successfully hovered over the '{name}' {role}."
+    except Exception as e:
+        return f"Error hovering element: {e}"
+
+@mcp.tool()
 def desktop_type(window_name: str, role: str, name: str, text: str) -> str:
     """
     Semantically finds a textbox or input field and types text into it.
@@ -137,10 +173,29 @@ def desktop_drag_and_drop(window_name: str, source_role: str, source_name: str, 
         window = desktop.get_window(window_name)
         source_element = window.find(role=source_role, name=source_name)
         target_element = window.find(role=target_role, name=target_name)
-        source_element.drag_to(target_element)
+        desktop.drag_and_drop(source_element, target_element)
         return f"Successfully dragged '{source_name}' to '{target_name}'."
     except Exception as e:
         return f"Error dragging and dropping: {e}"
+
+@mcp.tool()
+def desktop_drag_and_drop_coordinates(start_x: int, start_y: int, end_x: int, end_y: int, move_speed: int = 1, wait_time: float = 0.5) -> str:
+    """
+    Performs a drag-and-drop gesture from physical coordinates (start_x, start_y) to (end_x, end_y).
+    
+    Args:
+        start_x: The starting X coordinate.
+        start_y: The starting Y coordinate.
+        end_x: The ending X coordinate.
+        end_y: The ending Y coordinate.
+        move_speed: Mouse movement speed (default is 1).
+        wait_time: Delay in seconds after mouse up (default is 0.5).
+    """
+    try:
+        desktop.drag_and_drop_coordinates(start_x, start_y, end_x, end_y, move_speed=move_speed, wait_time=wait_time)
+        return f"Successfully performed coordinate drag-and-drop from ({start_x}, {start_y}) to ({end_x}, {end_y})."
+    except Exception as e:
+        return f"Error performing coordinate drag-and-drop: {e}"
 
 @mcp.tool()
 def desktop_manage_window(window_name: str, action: str, x: int = None, y: int = None, width: int = None, height: int = None) -> str:
