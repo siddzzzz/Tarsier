@@ -149,6 +149,40 @@ class WebDesktop:
         self.page = self.context.new_page()
         self.highlight_actions = highlight_actions
 
+    @property
+    def pages(self) -> List[WebElement]:
+        """Returns a list of all open pages/tabs in the browser context."""
+        return [WebElement(p, highlight_actions=self.highlight_actions) for p in self.context.pages]
+
+    def new_page(self, url: Optional[str] = None) -> WebElement:
+        """Opens a new tab/page, sets it as active, and optionally navigates to a URL."""
+        self.page = self.context.new_page()
+        if url:
+            self.goto(url)
+        return WebElement(self.page, highlight_actions=self.highlight_actions)
+
+    def switch_to_page(self, index: int) -> WebElement:
+        """Switches the active page context to the tab at the specified index."""
+        pages = self.context.pages
+        if index < 0 or index >= len(pages):
+            raise IndexError(f"Page index {index} out of range (0 to {len(pages)-1})")
+        self.page = pages[index]
+        self.page.bring_to_front()
+        return WebElement(self.page, highlight_actions=self.highlight_actions)
+
+    def switch_to_page_by_title(self, title: str) -> WebElement:
+        """Switches the active page context to the tab containing the specified title (case-insensitive)."""
+        for p in self.context.pages:
+            try:
+                p_title = p.title()
+                if title.lower() in p_title.lower():
+                    self.page = p
+                    self.page.bring_to_front()
+                    return WebElement(self.page, highlight_actions=self.highlight_actions)
+            except Exception:
+                pass
+        raise ValueError(f"No page found with title containing: '{title}'")
+
     def goto(self, url: str) -> WebElement:
         self.page.goto(url)
         try:

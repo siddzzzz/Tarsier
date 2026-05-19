@@ -342,6 +342,53 @@ def web_read_text(role: Optional[str] = None, name: Optional[str] = None, select
     except Exception as e:
         return f"Error reading web text: {e}"
 
+@mcp.tool()
+def web_new_page(url: Optional[str] = None) -> str:
+    """
+    Opens a new web tab or page.
+    
+    Args:
+        url: Optional URL to navigate to immediately in the new tab.
+    """
+    try:
+        web = get_web()
+        page = web.new_page(url=url)
+        return f"Successfully opened new tab. Active page title: '{page.name}'"
+    except Exception as e:
+        return f"Error opening new tab: {e}"
+
+@mcp.tool()
+def web_list_pages() -> str:
+    """
+    Lists all open browser tabs/pages with their indexes and titles.
+    """
+    try:
+        web = get_web()
+        pages_info = []
+        for i, p in enumerate(web.pages):
+            try:
+                pages_info.append(f"[{i}]: {p.page.title()}")
+            except Exception:
+                pages_info.append(f"[{i}]: (Unable to read title)")
+        return "Active Browser Tabs:\n" + "\n".join(pages_info)
+    except Exception as e:
+        return f"Error listing pages: {e}"
+
+@mcp.tool()
+def web_switch_to_page(index: int) -> str:
+    """
+    Switches active browser context to the tab/page at the specified index.
+    
+    Args:
+        index: The index of the tab (from web_list_pages).
+    """
+    try:
+        web = get_web()
+        page = web.switch_to_page(index)
+        return f"Successfully switched to tab [{index}]. Active page title: '{page.page.title()}'"
+    except Exception as e:
+        return f"Error switching tabs: {e}"
+
 def main():
     """Starts the stdio MCP server."""
     mcp.run()
