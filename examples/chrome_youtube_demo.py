@@ -53,7 +53,7 @@ def main():
         subprocess.Popen([chrome_path, "https://www.youtube.com"])
         
     print("Waiting for Google Chrome window to appear...")
-    chrome = desktop.wait_for_window(regex_name="(?i).*Google Chrome.*", timeout=15)
+    chrome = desktop.wait_for_window(regex_name="(?i).*YouTube.*", timeout=15)
     chrome.focus()
     
     # Maximize if not maximized already

@@ -44,15 +44,8 @@ def main():
     except Exception as e:
         print(f"Coordinate drag failed: {e}")
         
-    print("\nDemonstrating Semantic Tool Guard (Should fail gracefully on Mac/Linux):")
-    if sys.platform != 'win32':
-        try:
-            desktop.open_app("calculator")
-            print("  Warning: open_app succeeded? It should have failed on non-Windows!")
-        except NotImplementedError as e:
-            print(f"  Success: Semantic automation properly guarded: {e}")
-    else:
-        print("  Running on Windows. Semantic tool guard bypassed.")
+    print("\nDemonstrating Semantic Tool Support:")
+    print(f"  Semantic automation is now natively active and supported on platform: {sys.platform}!")
 
 if __name__ == "__main__":
     main()

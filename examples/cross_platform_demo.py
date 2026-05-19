@@ -10,24 +10,13 @@ def main():
     current_os = platform.system()
     print(f"Current Operating System detected: {current_os}")
     
-    if current_os == "Windows":
-        print("\nTarsier uses Windows UI Automation (UIA) as the underlying engine.")
-        print("Initializing Desktop session...")
-        from tarsier import Desktop
-        desktop = Desktop()
-        print("OK: Desktop initialized successfully on Windows.")
-        
-    elif current_os == "Darwin":
-        print("\nTarsier macOS support utilizes the Apple Accessibility (AXAPI) layer.")
-        print("[Note] macOS engine is currently in preview. Standard interface:")
-        print("  - Desktop session uses PyObjC hooks.")
-        
-    elif current_os == "Linux":
-        print("\nTarsier Linux support utilizes the AT-SPI layer.")
-        print("[Note] Linux engine is currently in preview.")
-        
-    else:
-        print(f"\nUnsupported operating system: {current_os}")
+    print("Initializing Desktop session...")
+    from tarsier import Desktop
+    try:
+        desktop = Desktop(highlight_actions=True)
+        print(f"OK: Desktop initialized successfully on {current_os}.")
+    except Exception as e:
+        print(f"Failed to initialize Desktop: {e}")
 
     print("\nTarsier's unified API abstracts all platform-specific controls:")
     print("  - Desktop.open_app()")
