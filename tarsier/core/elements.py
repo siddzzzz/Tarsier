@@ -61,9 +61,46 @@ class UIElement:
         self._control.DoubleClick()
         return self
 
+    def right_click(self) -> 'UIElement':
+        self._highlight()
+        self._control.RightClick()
+        return self
+
+    def hover(self) -> 'UIElement':
+        self._highlight()
+        rect = self._control.BoundingRectangle
+        x = (rect.left + rect.right) // 2
+        y = (rect.top + rect.bottom) // 2
+        import uiautomation as auto
+        auto.MoveTo(x, y)
+        return self
+
     def focus(self) -> 'UIElement':
         self._highlight()
         self._control.SetFocus()
+        return self
+
+    def drag_to(self, target: 'UIElement', move_speed: int = 1, wait_time: float = 0.5) -> 'UIElement':
+        """Drags the current element to the center of the target element."""
+        import uiautomation as auto
+        start_rect = self._control.BoundingRectangle
+        end_rect = target._control.BoundingRectangle
+        
+        start_x = (start_rect.left + start_rect.right) // 2
+        start_y = (start_rect.top + start_rect.bottom) // 2
+        
+        end_x = (end_rect.left + end_rect.right) // 2
+        end_y = (end_rect.top + end_rect.bottom) // 2
+        
+        self._highlight()
+        target._highlight()
+        
+        # Explicitly move the mouse to the start position so it's visually clear
+        auto.MoveTo(start_x, start_y)
+        import time
+        time.sleep(0.5)
+        
+        auto.DragDrop(start_x, start_y, end_x, end_y, moveSpeed=move_speed, waitTime=wait_time)
         return self
 
     def move(self, x: int, y: int) -> 'UIElement':
@@ -229,7 +266,10 @@ class UIElement:
         return self.find(role="button", name=name)
 
     def textbox(self, name: Optional[str] = None) -> 'UIElement':
-        return self.find(role="document", name=name) or self.find(role="edit", name=name)
+        try:
+            return self.find(role="document", name=name)
+        except ValueError:
+            return self.find(role="edit", name=name)
         
     def menu(self, name: str) -> 'UIElement':
         return self.find(role="menuitem", name=name)

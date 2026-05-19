@@ -74,16 +74,16 @@ class WebElement:
         self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
         return self
 
-    def find(self, role: Optional[str] = None, name: Optional[str] = None, selector: Optional[str] = None) -> 'WebElement':
+    def find(self, role: Optional[str] = None, name: Optional[str] = None, selector: Optional[str] = None, exact: bool = False) -> 'WebElement':
         loc = self._locator
         if selector:
             loc = loc.locator(selector)
         elif role and name:
-            loc = loc.get_by_role(role, name=name, exact=True)
+            loc = loc.get_by_role(role, name=name, exact=exact)
         elif role:
             loc = loc.get_by_role(role)
         elif name:
-            loc = loc.get_by_text(name, exact=True)
+            loc = loc.get_by_text(name, exact=exact)
             
         return WebElement(self.page, loc, role, name or selector, highlight_actions=self.highlight_actions)
 
@@ -109,7 +109,13 @@ class WebElement:
         return self.find(role="button", name=name)
 
     def textbox(self, name: Optional[str] = None) -> 'WebElement':
-        return self.find(role="textbox", name=name)
+        tb = self.find(role="textbox", name=name)
+        try:
+            if tb._locator.first.count() > 0:
+                return tb
+        except Exception:
+            pass
+        return self.find(role="searchbox", name=name)
         
     def menu(self, name: str) -> 'WebElement':
         return self.find(role="menuitem", name=name)
@@ -142,6 +148,40 @@ class WebDesktop:
         self.context = self.browser.new_context()
         self.page = self.context.new_page()
         self.highlight_actions = highlight_actions
+
+    @property
+    def pages(self) -> List[WebElement]:
+        """Returns a list of all open pages/tabs in the browser context."""
+        return [WebElement(p, highlight_actions=self.highlight_actions) for p in self.context.pages]
+
+    def new_page(self, url: Optional[str] = None) -> WebElement:
+        """Opens a new tab/page, sets it as active, and optionally navigates to a URL."""
+        self.page = self.context.new_page()
+        if url:
+            self.goto(url)
+        return WebElement(self.page, highlight_actions=self.highlight_actions)
+
+    def switch_to_page(self, index: int) -> WebElement:
+        """Switches the active page context to the tab at the specified index."""
+        pages = self.context.pages
+        if index < 0 or index >= len(pages):
+            raise IndexError(f"Page index {index} out of range (0 to {len(pages)-1})")
+        self.page = pages[index]
+        self.page.bring_to_front()
+        return WebElement(self.page, highlight_actions=self.highlight_actions)
+
+    def switch_to_page_by_title(self, title: str) -> WebElement:
+        """Switches the active page context to the tab containing the specified title (case-insensitive)."""
+        for p in self.context.pages:
+            try:
+                p_title = p.title()
+                if title.lower() in p_title.lower():
+                    self.page = p
+                    self.page.bring_to_front()
+                    return WebElement(self.page, highlight_actions=self.highlight_actions)
+            except Exception:
+                pass
+        raise ValueError(f"No page found with title containing: '{title}'")
 
     def goto(self, url: str) -> WebElement:
         self.page.goto(url)
