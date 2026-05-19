@@ -1,3 +1,4 @@
-uiautomation
-mcp
-playwright
+uiautomation>=2.0.29; sys_platform == 'win32'
+pyautogui>=0.9.54
+mcp>=1.27.0
+playwright>=1.59.0
