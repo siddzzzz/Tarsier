@@ -88,18 +88,12 @@ class WebElement:
         return WebElement(self.page, loc, role, name or selector, highlight_actions=self.highlight_actions)
 
     def wait_for_element(self, role: Optional[str] = None, name: Optional[str] = None, selector: Optional[str] = None, timeout: int = 10) -> 'WebElement':
-        import time
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            try:
-                el = self.find(role=role, name=name, selector=selector)
-                # Ensure it actually exists in the DOM
-                if el._locator.first.count() > 0:
-                    return el
-            except Exception:
-                pass
-            time.sleep(0.5)
-        raise TimeoutError(f"Timed out waiting for web element with name='{name}', role='{role}', selector='{selector}' after {timeout} seconds")
+        el = self.find(role=role, name=name, selector=selector)
+        try:
+            el._locator.first.wait_for(state="attached", timeout=timeout*1000)
+            return el
+        except Exception as e:
+            raise TimeoutError(f"Timed out waiting for web element with name='{name}', role='{role}', selector='{selector}' after {timeout} seconds. Error: {e}")
 
     def wait_until_clickable(self, timeout: int = 10) -> 'WebElement':
         self._locator.first.wait_for(state="visible", timeout=timeout*1000)
@@ -195,5 +189,27 @@ class WebDesktop:
         return WebElement(self.page, highlight_actions=self.highlight_actions)
 
     def close(self):
-        self.browser.close()
-        self._pw.stop()
+        if hasattr(self, 'browser') and self.browser:
+            try:
+                self.browser.close()
+            except Exception:
+                pass
+            self.browser = None
+        if hasattr(self, '_pw') and self._pw:
+            try:
+                self._pw.stop()
+            except Exception:
+                pass
+            self._pw = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:
+            pass

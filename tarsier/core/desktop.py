@@ -4,6 +4,71 @@ import sys
 from typing import Optional
 from tarsier.core.elements import UIElement
 
+def _send_pyautogui_keys(keys: str, waitTime: float = 0.05):
+    import pyautogui
+    import re
+    import time
+
+    KEY_MAP = {
+        'ctrl': 'ctrl',
+        'control': 'ctrl',
+        'shift': 'shift',
+        'alt': 'alt',
+        'option': 'option',
+        'command': 'command',
+        'cmd': 'command',
+        'win': 'win',
+        'lwin': 'win',
+        'rwin': 'win',
+        'enter': 'enter',
+        'return': 'return',
+        'tab': 'tab',
+        'space': 'space',
+        'backspace': 'backspace',
+        'delete': 'delete',
+        'esc': 'esc',
+        'escape': 'escape',
+        'up': 'up',
+        'down': 'down',
+        'left': 'left',
+        'right': 'right',
+        'pgup': 'pageup',
+        'pgdn': 'pagedown',
+        'f1': 'f1', 'f2': 'f2', 'f3': 'f3', 'f4': 'f4', 'f5': 'f5', 'f6': 'f6',
+        'f7': 'f7', 'f8': 'f8', 'f9': 'f9', 'f10': 'f10', 'f11': 'f11', 'f12': 'f12',
+    }
+
+    MODIFIERS = {'ctrl', 'shift', 'alt', 'option', 'command', 'win'}
+
+    tokens = []
+    pattern = r'\{([^}]+)\}|([a-zA-Z0-9]+)|(.)'
+    for match in re.finditer(pattern, keys):
+        braced, word, char = match.groups()
+        if braced:
+            k = braced.lower()
+            tokens.append(KEY_MAP.get(k, k))
+        elif word:
+            k = word.lower()
+            if k in KEY_MAP:
+                tokens.append(KEY_MAP[k])
+            else:
+                tokens.extend(list(word))
+        elif char:
+            tokens.append(char)
+
+    has_modifier = any(t in MODIFIERS for t in tokens)
+
+    if has_modifier:
+        pyautogui.hotkey(*tokens)
+    else:
+        for token in tokens:
+            if token in KEY_MAP.values():
+                pyautogui.press(token)
+            else:
+                pyautogui.write(token)
+
+    time.sleep(waitTime)
+
 class DesktopBackend:
     def open_app(self, executable: str, window_name: str = None, regex_name: str = None) -> UIElement:
         raise NotImplementedError()
@@ -192,15 +257,7 @@ class MacDesktopBackend(DesktopBackend):
         raise TimeoutError(f"Timed out waiting for window with name='{name}' or regex_name='{regex_name}' after {timeout} seconds")
 
     def hotkey(self, keys: str, waitTime: float = 0.05) -> 'MacDesktopBackend':
-        import pyautogui
-        import re
-        modifiers = re.findall(r'{(.*?)}', keys)
-        rest = re.sub(r'{.*?}', '', keys)
-        keys_list = [m.lower() for m in modifiers]
-        if rest:
-            keys_list.extend(list(rest))
-        pyautogui.hotkey(*keys_list)
-        time.sleep(waitTime)
+        _send_pyautogui_keys(keys, waitTime)
         return self
 
     def drag_and_drop_coordinates(self, start_x: int, start_y: int, end_x: int, end_y: int, move_speed: int = 1, wait_time: float = 0.5) -> 'MacDesktopBackend':
@@ -272,15 +329,7 @@ class LinuxDesktopBackend(DesktopBackend):
         raise TimeoutError(f"Timed out waiting for window with name='{name}' or regex_name='{regex_name}' after {timeout} seconds")
 
     def hotkey(self, keys: str, waitTime: float = 0.05) -> 'LinuxDesktopBackend':
-        import pyautogui
-        import re
-        modifiers = re.findall(r'{(.*?)}', keys)
-        rest = re.sub(r'{.*?}', '', keys)
-        keys_list = [m.lower() for m in modifiers]
-        if rest:
-            keys_list.extend(list(rest))
-        pyautogui.hotkey(*keys_list)
-        time.sleep(waitTime)
+        _send_pyautogui_keys(keys, waitTime)
         return self
 
     def drag_and_drop_coordinates(self, start_x: int, start_y: int, end_x: int, end_y: int, move_speed: int = 1, wait_time: float = 0.5) -> 'LinuxDesktopBackend':
