@@ -1,7 +1,7 @@
 <div align="center">
   <h1>🐒 Tarsier-AI</h1>
   <p><b>Accessibility Trees as a Portable Semantic Representation for Agentic GUI Control</b></p>
-  <p><i>The "Playwright" for Windows Desktop Apps.</i></p>
+  <p><i>The "Playwright" for Cross-Platform Desktop & Web Apps.</i></p>
 
   [![PyPI](https://img.shields.io/pypi/v/tarsier-ai.svg)](https://pypi.org/project/tarsier-ai/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -12,18 +12,24 @@
 
 ## 🎯 What is Tarsier-AI?
 
-Tarsier is an open-source **infrastructure layer** designed to provide robust, deterministic interaction with Windows desktop applications for Large Language Models (LLMs). 
+Tarsier is an open-source **infrastructure layer** designed to provide robust, deterministic interaction with Windows, macOS, and Linux desktop applications, as well as web applications, for Large Language Models (LLMs). 
 
 Most "AI Computer Use" agents rely on taking screenshots, sending them to expensive vision models, and guessing X/Y pixel coordinates to click. This results in high inference latency, coordinate brittleness, and massive token consumption.
 
 **Tarsier takes a fundamentally different approach.** 
 
-Instead of screenshots, Tarsier hooks directly into the **Windows UI Automation (UIA) accessibility layer**. It extracts the exact structure of the application, semantically prunes it, and compresses it into a highly token-efficient **YAML ARIA-Snapshot** (the "Desktop DOM"). This allows LLMs to interact via deterministic semantic names and roles (e.g., "Click the Save button").
+Instead of screenshots, Tarsier hooks directly into standard **native OS accessibility layers**:
+* **Windows:** UI Automation (UIA) via `uiautomation`
+* **macOS:** Accessibility API (AXAPI) via `atomacos`
+* **Linux:** Assistive Technology Service Provider Interface (AT-SPI) via `pyatspi`
+
+It extracts the exact semantic structure of the active application, prunes redundant nodes, and serializes it into a highly token-efficient **YAML ARIA-Snapshot** (the "Desktop DOM"). This allows LLMs to interact using deterministic semantic names and roles (e.g., "Click the Save button") instead of visual coordinates.
 
 ### ✨ Why use Tarsier over Vision Models?
-* 🚀 **Zero Vision Models Needed:** Completely eliminates the need for slow, multimodal vision processing.
-* 📉 **68% Token Reduction:** By converting raw accessibility JSON into semantic YAML, Tarsier massively condenses the payload context.
+* 🚀 **Zero Vision Models Needed:** Completely eliminates slow, multimodal vision processing.
+* 📉 **69.6% Token Reduction:** Condenses verbose accessibility dumps into compact, human-readable YAML.
 * 🎯 **100% Deterministic:** No hallucinated XY coordinates or missed clicks if a window resizes or a button moves.
+* 💻 **True Cross-Platform:** The exact same Python code works on Windows, macOS, and Linux out-of-the-box.
 * 🧠 **LLM Friendly:** Large Language Models are fundamentally text-processing engines. Parsing a semantic YAML tree is their native strength!
 
 ---
@@ -34,7 +40,7 @@ Tarsier operates as a portable Intermediate Representation (IR) bridging the OS 
 
 ```mermaid
 graph LR
-    A[Desktop GUI] -->|UIAutomation| B(Raw Accessibility Tree)
+    A[Desktop GUI] -->|Native Accessibility APIs| B(Raw Accessibility Tree)
     B -->|Semantic Pruning| C(Tarsier Core)
     C -->|Serialization| D{YAML Snapshot}
     D -->|Tool Context| E[MCP Server]
@@ -54,7 +60,7 @@ graph LR
 
 Standard UI automation outputs verbose, deeply nested JSON. Tarsier dynamically prunes redundant nodes and formats the tree into a highly compressed YAML structure (inspired by Playwright).
 
-Our empirical benchmarks across Windows Calculator, Notepad, Paint, and File Explorer demonstrate a **highly consistent ~69.6% reduction** in token consumption.
+Our empirical benchmarks across native Calculator, Notepad, and File Explorer apps demonstrate a **highly consistent ~69.6% reduction** in token consumption.
 
 **Raw JSON (1,210 tokens)**
 ```json
@@ -79,18 +85,20 @@ Our empirical benchmarks across Windows Calculator, Notepad, Paint, and File Exp
 
 ## 📦 Installation
 
-Install Tarsier directly from PyPI:
+Install Tarsier directly from PyPI. Tarsier dynamically manages and installs platform-specific dependencies automatically:
 
 ```bash
 pip install tarsier-ai
 ```
+
+*Note: On macOS, `atomacos` and necessary `pyobjc` frameworks are installed automatically.*
 
 ---
 
 ## 🛠️ Usage & Examples
 
 ### 1. Opening an App & Dumping the Semantic State
-Tarsier serializes the desktop state into a semantic YAML tree. This is exactly what you should feed to your LLM agent.
+Tarsier serializes the desktop state into a semantic YAML tree. The code is identical across all operating systems:
 
 ```python
 from tarsier import Desktop
@@ -98,7 +106,7 @@ from tarsier import Desktop
 # Initialize with Visual Debugging (Highlights elements in red as they are clicked)
 desktop = Desktop(highlight_actions=True)
 
-# Wait for Notepad to open
+# Wait for Notepad to open (works on Windows, macOS, and Linux)
 notepad = desktop.wait_for_window(regex_name="(?i).*Notepad.*")
 
 # Dump the highly-compressed YAML state
@@ -106,7 +114,7 @@ print(notepad.to_yaml_snapshot())
 ```
 
 ### 2. Semantic Interaction
-You can query elements exactly like you would use query selectors in the browser.
+Query and interact with desktop controls using roles and names.
 
 ```python
 # Generic find by role and name
@@ -117,8 +125,22 @@ notepad.button("Submit").click()
 notepad.textbox("Username").type("Hello from Tarsier!")
 ```
 
-### 3. Window Management
-LLMs can easily reorganize their desktop workspace using native OS Transform patterns.
+### 3. Web Automation with Lifecycle Safety
+Tarsier also supports web automation via Playwright with built-in context manager safety:
+
+```python
+from tarsier import WebDesktop
+
+# Safe context manager ensuring the browser process terminates cleanly
+with WebDesktop() as web:
+    web.navigate("https://wikipedia.org")
+    search_box = web.wait_for_element(role="textbox", name="Search Wikipedia")
+    search_box.type("Tarsier")
+    web.button("Search").click()
+```
+
+### 4. Window Management
+Modify workspace coordinates using native OS Window Transform patterns:
 
 ```python
 notepad.move(x=100, y=100)
@@ -131,7 +153,7 @@ notepad.close()
 
 ## 🤖 AI Agent Integration (MCP)
 
-Tarsier comes with a built-in **Model Context Protocol (MCP)** server! You can plug Tarsier directly into AI agents like **Claude Desktop** or **Cursor** to let them autonomously control your Windows desktop.
+Tarsier comes with a built-in **Model Context Protocol (MCP)** server! You can plug Tarsier directly into AI agents like **Claude Desktop** or **Cursor** to let them autonomously control your local environment.
 
 ### Available MCP Tools:
 * `desktop_open_app`: Launch or attach to a window.
@@ -139,6 +161,7 @@ Tarsier comes with a built-in **Model Context Protocol (MCP)** server! You can p
 * `desktop_click`: Semantically clicks an element.
 * `desktop_type`: Types text into an element.
 * `desktop_manage_window`: Maximize, minimize, move, resize, or close a window.
+* `web_close_browser`: Safely closes the browser context and stops the Playwright session.
 
 ### Claude Desktop Integration:
 Add Tarsier to your `claude_desktop_config.json`:
