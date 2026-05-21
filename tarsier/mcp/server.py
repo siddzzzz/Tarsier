@@ -389,6 +389,22 @@ def web_switch_to_page(index: int) -> str:
     except Exception as e:
         return f"Error switching tabs: {e}"
 
+@mcp.tool()
+def web_close_browser() -> str:
+    """
+    Safely closes the browser context and stops the Playwright session, releasing resources.
+    """
+    global web_desktop
+    if web_desktop:
+        try:
+            web_desktop.close()
+            web_desktop = None
+            return "Successfully closed web browser and stopped Playwright session."
+        except Exception as e:
+            return f"Error closing web browser: {e}"
+    else:
+        return "No active browser session to close."
+
 def main():
     """Starts the stdio MCP server."""
     mcp.run()
