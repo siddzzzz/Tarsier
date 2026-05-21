@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tarsier-ai"
-version = "0.4.0"
+version = "0.5.0"
 authors = [
   { name="siddzzzz" }
 ]
@@ -19,9 +19,13 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "uiautomation>=2.0.29",
+    "uiautomation>=2.0.29; sys_platform == 'win32'",
+    "pyautogui>=0.9.54",
     "mcp>=1.27.0",
-    "playwright>=1.59.0"
+    "playwright>=1.59.0",
+    "atomacos>=0.1.1; sys_platform == 'darwin'",
+    "pyobjc-framework-ApplicationServices>=9.0; sys_platform == 'darwin'",
+    "pyobjc-framework-Cocoa>=9.0; sys_platform == 'darwin'"
 ]
 
 [project.urls]
