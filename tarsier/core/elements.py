@@ -4,6 +4,10 @@ import sys
 from typing import List, Dict, Any, Optional
 
 ROLE_MAPPING = {
+    # Windows ControlTypeNames mapped to standard roles
+    "edit": "textbox",
+    "document": "textbox",
+    "hyperlink": "link",
     # macOS
     "axstatictext": "text",
     "axtextfield": "textbox",
@@ -94,7 +98,7 @@ class UIElementBackend:
         raise NotImplementedError()
     def dump_ui(self, max_depth: int = 2) -> Dict[str, Any]:
         raise NotImplementedError()
-    def to_yaml_snapshot(self, max_depth: int = 5) -> str:
+    def to_yaml_snapshot(self, max_depth: int = 15) -> str:
         raise NotImplementedError()
 
 class WindowsUIElement(UIElementBackend):
@@ -108,7 +112,8 @@ class WindowsUIElement(UIElementBackend):
 
     @property
     def role(self) -> str:
-        return self._control.ControlTypeName
+        raw_role = self._control.ControlTypeName.replace("Control", "").lower()
+        return ROLE_MAPPING.get(raw_role, raw_role)
 
     def _highlight(self):
         if not getattr(self, 'highlight_actions', False):
@@ -333,8 +338,10 @@ class WindowsUIElement(UIElementBackend):
         return self._dump_recursive(self._control, 0, max_depth)
         
     def _dump_recursive(self, control, current_depth: int, max_depth: int) -> Dict[str, Any]:
+        raw_role = control.ControlTypeName.replace("Control", "").lower() or "unknown"
+        role = ROLE_MAPPING.get(raw_role, raw_role)
         data = {
-            "role": control.ControlTypeName.replace("Control", "").lower() or "unknown",
+            "role": role,
             "name": control.Name,
         }
         if current_depth < max_depth:
@@ -343,14 +350,53 @@ class WindowsUIElement(UIElementBackend):
                 data["elements"] = [self._dump_recursive(c, current_depth + 1, max_depth) for c in children]
         return data
 
-    def to_yaml_snapshot(self, max_depth: int = 5) -> str:
+    def _build_keep_set(self, control, keep_set: set) -> bool:
+        try:
+            runtime_id = control.GetRuntimeId()
+        except Exception:
+            return False
+            
+        is_meaningful = False
+        try:
+            raw_role = control.ControlTypeName.replace("Control", "").lower() or "unknown"
+            role = ROLE_MAPPING.get(raw_role, raw_role)
+            name = control.Name
+            if role in ["button", "textbox", "checkbox", "radio", "combobox", "link", "menuitem", "window", "document", "edit"]:
+                is_meaningful = True
+            elif name and name.strip():
+                is_meaningful = True
+        except Exception:
+            pass
+            
+        has_keep_child = False
+        try:
+            children = control.GetChildren()
+            if children:
+                for child in children:
+                    if self._build_keep_set(child, keep_set):
+                        has_keep_child = True
+        except Exception:
+            pass
+            
+        if is_meaningful or has_keep_child:
+            keep_set.add(runtime_id)
+            return True
+        return False
+
+    def to_yaml_snapshot(self, max_depth: int = 15) -> str:
         lines = []
-        self._to_yaml_recursive(self._control, 0, max_depth, lines)
+        keep_set = set()
+        self._build_keep_set(self._control, keep_set)
+        self._to_yaml_recursive(self._control, 0, max_depth, lines, keep_set)
         return "\n".join(lines)
         
-    def _to_yaml_recursive(self, control, depth: int, max_depth: int, lines: List[str]):
+    def _to_yaml_recursive(self, control, depth: int, max_depth: int, lines: List[str], keep_set: set):
         try:
-            role = control.ControlTypeName.replace("Control", "").lower() or "unknown"
+            runtime_id = control.GetRuntimeId()
+            if runtime_id not in keep_set:
+                return
+            raw_role = control.ControlTypeName.replace("Control", "").lower() or "unknown"
+            role = ROLE_MAPPING.get(raw_role, raw_role)
             name = control.Name
         except Exception:
             return
@@ -366,11 +412,20 @@ class WindowsUIElement(UIElementBackend):
         except Exception:
             children = []
 
-        if children and depth < max_depth:
+        valid_children = []
+        for child in children:
+            try:
+                c_id = child.GetRuntimeId()
+                if c_id in keep_set:
+                    valid_children.append(child)
+            except Exception:
+                pass
+
+        if valid_children and depth < max_depth:
             line += ":"
             lines.append(line)
-            for child in children:
-                self._to_yaml_recursive(child, depth + 1, max_depth, lines)
+            for child in valid_children:
+                self._to_yaml_recursive(child, depth + 1, max_depth, lines, keep_set)
         else:
             lines.append(line)
 
@@ -482,7 +537,6 @@ class MacUIElement(UIElementBackend):
 
     def close(self) -> 'MacUIElement':
         try:
-            # atomacos exposes a close action or property
             self._control.close()
         except Exception:
             self.focus()
@@ -605,13 +659,58 @@ class MacUIElement(UIElementBackend):
                 data["elements"] = [self._dump_recursive(c, current_depth + 1, max_depth) for c in children]
         return data
 
-    def to_yaml_snapshot(self, max_depth: int = 5) -> str:
+    def _build_keep_set(self, control, keep_set: set) -> bool:
+        try:
+            el_role = getattr(control, 'AXRole', "unknown")
+            role = ROLE_MAPPING.get(el_role.lower(), el_role.replace("AX", "").lower())
+            name = getattr(control, 'AXTitle', "") or getattr(control, 'AXDescription', "") or ""
+        except Exception:
+            return False
+            
+        is_meaningful = False
+        if role in ["button", "textbox", "checkbox", "radio", "combobox", "link", "menuitem", "window", "document", "edit"]:
+            is_meaningful = True
+        elif name and str(name).strip():
+            is_meaningful = True
+            
+        has_keep_child = False
+        try:
+            children = getattr(control, 'AXChildren', None)
+            if children:
+                for child in children:
+                    if self._build_keep_set(child, keep_set):
+                        has_keep_child = True
+        except Exception:
+            pass
+            
+        try:
+            key = control
+            hash(key)
+        except Exception:
+            key = id(control)
+            
+        if is_meaningful or has_keep_child:
+            keep_set.add(key)
+            return True
+        return False
+
+    def to_yaml_snapshot(self, max_depth: int = 15) -> str:
         lines = []
-        self._to_yaml_recursive(self._control, 0, max_depth, lines)
+        keep_set = set()
+        self._build_keep_set(self._control, keep_set)
+        self._to_yaml_recursive(self._control, 0, max_depth, lines, keep_set)
         return "\n".join(lines)
         
-    def _to_yaml_recursive(self, control, depth: int, max_depth: int, lines: List[str]):
+    def _to_yaml_recursive(self, control, depth: int, max_depth: int, lines: List[str], keep_set: set):
         try:
+            try:
+                key = control
+                hash(key)
+            except Exception:
+                key = id(control)
+            if key not in keep_set:
+                return
+                
             el_role = getattr(control, 'AXRole', "unknown")
             role = ROLE_MAPPING.get(el_role.lower(), el_role.replace("AX", "").lower())
             name = getattr(control, 'AXTitle', "") or getattr(control, 'AXDescription', "") or ""
@@ -629,11 +728,25 @@ class MacUIElement(UIElementBackend):
         except Exception:
             children = None
 
-        if children and depth < max_depth:
+        valid_children = []
+        if children:
+            for child in children:
+                try:
+                    try:
+                        ckey = child
+                        hash(ckey)
+                    except Exception:
+                        ckey = id(child)
+                    if ckey in keep_set:
+                        valid_children.append(child)
+                except Exception:
+                    pass
+
+        if valid_children and depth < max_depth:
             line += ":"
             lines.append(line)
-            for child in children:
-                self._to_yaml_recursive(child, depth + 1, max_depth, lines)
+            for child in valid_children:
+                self._to_yaml_recursive(child, depth + 1, max_depth, lines, keep_set)
         else:
             lines.append(line)
 
@@ -850,13 +963,60 @@ class LinuxUIElement(UIElementBackend):
                 data["elements"] = elements
         return data
 
-    def to_yaml_snapshot(self, max_depth: int = 5) -> str:
+    def _build_keep_set(self, control, keep_set: set) -> bool:
+        try:
+            role_name = control.getRoleName() or "unknown"
+            role = ROLE_MAPPING.get(role_name.lower(), role_name.replace(" ", "_").lower())
+            name = control.name or ""
+        except Exception:
+            return False
+            
+        is_meaningful = False
+        if role in ["button", "textbox", "checkbox", "radio", "combobox", "link", "menuitem", "window", "document", "edit"]:
+            is_meaningful = True
+        elif name and name.strip():
+            is_meaningful = True
+            
+        has_keep_child = False
+        try:
+            child_count = control.childCount
+            if child_count > 0:
+                for i in range(child_count):
+                    child = control.getChildAtIndex(i)
+                    if child:
+                        if self._build_keep_set(child, keep_set):
+                            has_keep_child = True
+        except Exception:
+            pass
+            
+        try:
+            key = control
+            hash(key)
+        except Exception:
+            key = id(control)
+            
+        if is_meaningful or has_keep_child:
+            keep_set.add(key)
+            return True
+        return False
+
+    def to_yaml_snapshot(self, max_depth: int = 15) -> str:
         lines = []
-        self._to_yaml_recursive(self._control, 0, max_depth, lines)
+        keep_set = set()
+        self._build_keep_set(self._control, keep_set)
+        self._to_yaml_recursive(self._control, 0, max_depth, lines, keep_set)
         return "\n".join(lines)
         
-    def _to_yaml_recursive(self, control, depth: int, max_depth: int, lines: List[str]):
+    def _to_yaml_recursive(self, control, depth: int, max_depth: int, lines: List[str], keep_set: set):
         try:
+            try:
+                key = control
+                hash(key)
+            except Exception:
+                key = id(control)
+            if key not in keep_set:
+                return
+                
             role_name = control.getRoleName() or "unknown"
             role = ROLE_MAPPING.get(role_name.lower(), role_name.replace(" ", "_").lower())
             name = control.name or ""
@@ -874,16 +1034,27 @@ class LinuxUIElement(UIElementBackend):
         except Exception:
             child_count = 0
 
-        if child_count > 0 and depth < max_depth:
-            line += ":"
-            lines.append(line)
+        valid_children = []
+        if child_count > 0:
             for i in range(child_count):
                 try:
                     child = control.getChildAtIndex(i)
                     if child:
-                        self._to_yaml_recursive(child, depth + 1, max_depth, lines)
+                        try:
+                            ckey = child
+                            hash(ckey)
+                        except Exception:
+                            ckey = id(child)
+                        if ckey in keep_set:
+                            valid_children.append(child)
                 except Exception:
                     pass
+
+        if valid_children and depth < max_depth:
+            line += ":"
+            lines.append(line)
+            for child in valid_children:
+                self._to_yaml_recursive(child, depth + 1, max_depth, lines, keep_set)
         else:
             lines.append(line)
 
@@ -996,7 +1167,7 @@ class UIElement:
     def dump_ui(self, max_depth: int = 2) -> Dict[str, Any]:
         return self._backend.dump_ui(max_depth)
 
-    def to_yaml_snapshot(self, max_depth: int = 5) -> str:
+    def to_yaml_snapshot(self, max_depth: int = 15) -> str:
         return self._backend.to_yaml_snapshot(max_depth)
 
     def to_json(self) -> str:
