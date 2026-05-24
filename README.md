@@ -106,7 +106,7 @@ The table below details the token counts (evaluated using the OpenAI `cl100k_bas
 ### 2. System Latency & Performance
 While token efficiency is critical, the runtime performance of the representation layer dictates real-world viability. Screenshot-based agents running on vision models (VLMs) incur massive inference overhead, typically taking **5,000 ms to 15,000 ms** per step to process pixels and generate output. 
 
-Tarsier-AI's extraction, compression, and query pipeline resolves in sub-second execution times (evaluated on Windows 11, Intel Core i7, 32GB RAM):
+Tarsier-AI's extraction, compression, and query pipeline resolves in sub-second execution times (evaluated on Windows 11, Intel Core i5, 16GB RAM):
 
 | Pipeline Operation | Average Execution Time (ms) | Performance Impact |
 | :--- | :---: | :--- |
@@ -356,8 +356,7 @@ If you use Tarsier-AI in your research or projects, please cite it using the fol
   author = {Sahay, Siddharth},
   title = {Tarsier-AI: Accessibility Trees as a Portable Semantic Representation for Agentic GUI Control},
   year = {2026},
-  url = {https://github.com/siddzzzz/Tarsier},
-  version = {0.5.1}
+  url = {https://github.com/siddzzzz/Tarsier}
 }
 ```
 
