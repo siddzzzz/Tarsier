@@ -48,4 +48,6 @@ PUBLISHING.md
 handoff.md
 examples/test_install.py
 examples/tarsier_demo_dest/
-#temp
+#temp
+paper/
+scratch/
