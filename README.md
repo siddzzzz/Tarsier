@@ -5,7 +5,6 @@
 
   [![PyPI](https://img.shields.io/pypi/v/tarsier-ai.svg)](https://pypi.org/project/tarsier-ai/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-  [![arXiv](https://img.shields.io/badge/arXiv-26xx.xxxxx-b31b1b.svg)](#) *(Paper Coming Soon)*
 </div>
 
 ---
@@ -173,6 +172,22 @@ Add Tarsier to your `claude_desktop_config.json`:
       "command": "tarsier-mcp"
     }
   }
+}
+```
+
+---
+
+## 📄 Citation
+
+If you use Tarsier-AI in your research or projects, please cite it using the following BibTeX entry:
+
+```bibtex
+@software{sahay2026tarsier,
+  author = {Sahay, Siddharth},
+  title = {Tarsier-AI: Accessibility Trees as a Portable Semantic Representation for Agentic GUI Control},
+  year = {2026},
+  url = {https://github.com/siddzzzz/Tarsier},
+  version = {0.5.1}
 }
 ```
 

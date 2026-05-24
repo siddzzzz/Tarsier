@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software in your research or projects, please cite it as below."
+authors:
+- family-names: "Sahay"
+  given-names: "Siddharth"
+title: "Tarsier-AI: Accessibility Trees as a Portable Semantic Representation for Agentic GUI Control"
+version: "0.5.1"
+date-released: "2026-05-24"
+url: "https://github.com/siddzzzz/Tarsier"
