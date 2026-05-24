@@ -355,12 +355,80 @@ def run_agent(task_prompt: str, api_key: str):
     )
 
     print(f"\n[+] Starting agentic workflow for task:\n\"{task_prompt}\"")
-    chat = model.start_chat(enable_automatic_function_calling=True)
+    chat = model.start_chat()
     
     try:
         response = chat.send_message(task_prompt)
+        
+        while True:
+            # Safely try to get text thought
+            try:
+                if response.text:
+                    print(f"\n🧠 [Model Thought]:\n{response.text}")
+            except Exception:
+                pass
+                
+            # Check for function calls
+            function_calls = []
+            try:
+                for part in response.candidates[0].content.parts:
+                    if part.function_call:
+                        function_calls.append(part.function_call)
+            except Exception:
+                pass
+                
+            if not function_calls:
+                break
+                
+            response_parts = []
+            for call in function_calls:
+                name = call.name
+                args = call.args
+                
+                print(f"\n⚙️ [Model Action] Calling tool '{name}' with args:")
+                for k, v in args.items():
+                    val_str = str(v)
+                    if len(val_str) > 100:
+                        val_str = val_str[:100] + "..."
+                    print(f"  - {k}: {val_str}")
+                    
+                # Execute tool
+                result = "Unknown function"
+                if name in globals():
+                    try:
+                        func_args = {k: v for k, v in args.items()}
+                        result = globals()[name](**func_args)
+                    except Exception as e:
+                        result = f"Error executing tool: {e}"
+                else:
+                    result = f"Error: Tool '{name}' not found."
+                    
+                # Print output
+                print(f"📊 [Tool Output]:")
+                result_str = str(result)
+                if len(result_str) > 500:
+                    print(result_str[:500] + f"\n... (truncated {len(result_str)-500} characters)")
+                else:
+                    print(result_str)
+                    
+                # Build part
+                part = genai.protos.Part(
+                    function_response=genai.protos.FunctionResponse(
+                        name=name,
+                        response={'result': result}
+                    )
+                )
+                response_parts.append(part)
+                
+            # Send back response
+            response = chat.send_message(response_parts)
+            
         print("\n=== Agent Finished Output ===")
-        print(response.text)
+        try:
+            print(response.text)
+        except Exception:
+            print("(No final text output)")
+            
     except Exception as e:
         print(f"\n[!] Execution error: {e}", file=sys.stderr)
 
