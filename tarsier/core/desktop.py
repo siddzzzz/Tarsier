@@ -92,6 +92,35 @@ class WindowsDesktopBackend(DesktopBackend):
         except Exception:
             pass
 
+    def _trigger_chrome_accessibility(self):
+        """
+        Programmatically triggers accessibility tree activation on all active
+        Chromium-based windows (Chrome, Edge, Brave, Electron apps, etc.) on Windows
+        by sending the WM_GETOBJECT message with OBJID_CLIENT to any Chrome_RenderWidgetHostHWND controls.
+        This forces the browser renderer to turn on and expose its inner DOM tree.
+        """
+        try:
+            import ctypes
+            from ctypes import wintypes
+            
+            EnumChildProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+            WM_GETOBJECT = 0x003D
+            OBJID_CLIENT = 0xFFFFFFFC # -4
+            
+            user32 = ctypes.windll.user32
+            
+            def enum_window_callback(hwnd, lParam):
+                class_name = ctypes.create_unicode_buffer(256)
+                user32.GetClassNameW(hwnd, class_name, 256)
+                if class_name.value == "Chrome_RenderWidgetHostHWND":
+                    user32.SendMessageW(hwnd, WM_GETOBJECT, 0, OBJID_CLIENT)
+                return True
+                
+            self._enum_callback = EnumChildProc(enum_window_callback)
+            user32.EnumChildWindows(0, self._enum_callback, 0)
+        except Exception:
+            pass
+
     def open_app(self, executable: str, window_name: str = None, regex_name: str = None) -> UIElement:
         import uiautomation as auto
         subprocess.Popen(executable)
@@ -103,8 +132,10 @@ class WindowsDesktopBackend(DesktopBackend):
             while window and window.GetParentControl() and window.GetParentControl().ControlTypeName != 'PaneControl':
                  parent = window.GetParentControl()
                  if parent.Name == 'Desktop 1':
-                     break
+                      break
                  window = parent
+            self._trigger_chrome_accessibility()
+            time.sleep(0.5)
             return UIElement(window, highlight_actions=self.highlight_actions)
             
         # If name or regex provided, use smart wait
@@ -115,6 +146,8 @@ class WindowsDesktopBackend(DesktopBackend):
         window = auto.WindowControl(searchDepth=1, Name=name)
         if not window.Exists(3, 1):
             raise Exception(f"Could not find window with name: {name}")
+        self._trigger_chrome_accessibility()
+        time.sleep(0.5)
         return UIElement(window, highlight_actions=self.highlight_actions)
         
     def wait_for_window(self, name: str = None, regex_name: str = None, timeout: int = 10) -> UIElement:
@@ -131,6 +164,8 @@ class WindowsDesktopBackend(DesktopBackend):
         if not window.Exists(timeout, 1):
             raise TimeoutError(f"Timed out waiting for window: {name or regex_name} after {timeout} seconds")
             
+        self._trigger_chrome_accessibility()
+        time.sleep(0.5)
         return UIElement(window, highlight_actions=self.highlight_actions)
 
     def hotkey(self, keys: str, waitTime: float = 0.05) -> 'WindowsDesktopBackend':
