@@ -383,11 +383,50 @@ class WindowsUIElement(UIElementBackend):
             return True
         return False
 
+    def _get_content_root(self, control):
+        from collections import deque
+        # Phase 1: Try to find Chrome_RenderWidgetHostHWND (Chromium content viewport)
+        queue = deque([control])
+        while queue:
+            curr = queue.popleft()
+            try:
+                if curr.ClassName == "Chrome_RenderWidgetHostHWND":
+                    return curr
+            except Exception:
+                pass
+            try:
+                children = curr.GetChildren()
+                if children:
+                    queue.extend(children)
+            except Exception:
+                pass
+                
+        # Phase 2: Fallback to finding a document control that has children
+        queue = deque([control])
+        while queue:
+            curr = queue.popleft()
+            try:
+                role = curr.ControlTypeName.replace("Control", "").lower()
+                if role == "document":
+                    children = curr.GetChildren()
+                    if children and len(children) > 0:
+                        return curr
+            except Exception:
+                pass
+            try:
+                children = curr.GetChildren()
+                if children:
+                    queue.extend(children)
+            except Exception:
+                pass
+        return control
+
     def to_yaml_snapshot(self, max_depth: int = 15) -> str:
+        content_root = self._get_content_root(self._control)
         lines = []
         keep_set = set()
-        self._build_keep_set(self._control, keep_set)
-        self._to_yaml_recursive(self._control, 0, max_depth, lines, keep_set)
+        self._build_keep_set(content_root, keep_set)
+        self._to_yaml_recursive(content_root, 0, max_depth, lines, keep_set)
         return "\n".join(lines)
         
     def _to_yaml_recursive(self, control, depth: int, max_depth: int, lines: List[str], keep_set: set):
@@ -694,11 +733,31 @@ class MacUIElement(UIElementBackend):
             return True
         return False
 
+    def _get_content_root(self, control):
+        from collections import deque
+        queue = deque([control])
+        while queue:
+            curr = queue.popleft()
+            try:
+                role = getattr(curr, 'AXRole', "").lower()
+                if "webarea" in role or "document" in role:
+                    return curr
+            except Exception:
+                pass
+            try:
+                children = getattr(curr, 'AXChildren', None)
+                if children:
+                    queue.extend(children)
+            except Exception:
+                pass
+        return control
+
     def to_yaml_snapshot(self, max_depth: int = 15) -> str:
+        content_root = self._get_content_root(self._control)
         lines = []
         keep_set = set()
-        self._build_keep_set(self._control, keep_set)
-        self._to_yaml_recursive(self._control, 0, max_depth, lines, keep_set)
+        self._build_keep_set(content_root, keep_set)
+        self._to_yaml_recursive(content_root, 0, max_depth, lines, keep_set)
         return "\n".join(lines)
         
     def _to_yaml_recursive(self, control, depth: int, max_depth: int, lines: List[str], keep_set: set):
@@ -787,6 +846,7 @@ class LinuxUIElement(UIElementBackend):
         return self
 
     def hover(self) -> 'LinuxUIElement':
+        # pyrefly: ignore [missing-import]
         import pyatspi
         comp = self._control.queryComponent()
         box = comp.getExtents(pyatspi.XY_SCREEN)
@@ -805,6 +865,7 @@ class LinuxUIElement(UIElementBackend):
         return self
 
     def drag_to(self, target: Any, move_speed: int = 1, wait_time: float = 0.5) -> 'LinuxUIElement':
+        # pyrefly: ignore [missing-import]
         import pyatspi
         src_comp = self._control.queryComponent()
         src_box = src_comp.getExtents(pyatspi.XY_SCREEN)
@@ -936,6 +997,8 @@ class LinuxUIElement(UIElementBackend):
 
     def wait_until_clickable(self, timeout: int = 10) -> 'LinuxUIElement':
         import time
+        # pyrefly: ignore [missing-import]
+        import pyatspi
         start_time = time.time()
         while time.time() - start_time < timeout:
             state = self._control.getState()
@@ -1000,11 +1063,34 @@ class LinuxUIElement(UIElementBackend):
             return True
         return False
 
+    def _get_content_root(self, control):
+        from collections import deque
+        queue = deque([control])
+        while queue:
+            curr = queue.popleft()
+            try:
+                role = curr.getRoleName().lower()
+                if "document" in role:
+                    return curr
+            except Exception:
+                pass
+            try:
+                child_count = curr.childCount
+                if child_count > 0:
+                    for i in range(child_count):
+                        child = curr.getChildAtIndex(i)
+                        if child:
+                            queue.append(child)
+            except Exception:
+                pass
+        return control
+
     def to_yaml_snapshot(self, max_depth: int = 15) -> str:
+        content_root = self._get_content_root(self._control)
         lines = []
         keep_set = set()
-        self._build_keep_set(self._control, keep_set)
-        self._to_yaml_recursive(self._control, 0, max_depth, lines, keep_set)
+        self._build_keep_set(content_root, keep_set)
+        self._to_yaml_recursive(content_root, 0, max_depth, lines, keep_set)
         return "\n".join(lines)
         
     def _to_yaml_recursive(self, control, depth: int, max_depth: int, lines: List[str], keep_set: set):
