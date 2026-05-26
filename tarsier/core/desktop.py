@@ -202,6 +202,7 @@ class MacDesktopBackend(DesktopBackend):
 
     def _find_running_app_info(self, executable: str):
         try:
+            # pyrefly: ignore [missing-import]
             from Cocoa import NSWorkspace
             workspace = NSWorkspace.sharedWorkspace()
             for app in workspace.runningApplications():
@@ -214,6 +215,7 @@ class MacDesktopBackend(DesktopBackend):
         return None, None
 
     def open_app(self, executable: str, window_name: str = None, regex_name: str = None) -> UIElement:
+        # pyrefly: ignore [missing-import]
         import atomacos
         pid, bundle_id = self._find_running_app_info(executable)
         if pid is None:
@@ -237,6 +239,7 @@ class MacDesktopBackend(DesktopBackend):
         if pid is None:
             time.sleep(2)
             try:
+                # pyrefly: ignore [missing-import]
                 from Cocoa import NSWorkspace
                 pid = NSWorkspace.sharedWorkspace().activeApplication()['NSApplicationProcessIdentifier']
             except Exception:
@@ -256,7 +259,9 @@ class MacDesktopBackend(DesktopBackend):
             raise Exception(f"Error getting app accessibility reference for PID {pid}: {e}")
 
     def get_window(self, name: str) -> UIElement:
+        # pyrefly: ignore [missing-import]
         import atomacos
+        # pyrefly: ignore [missing-import]
         from Cocoa import NSWorkspace
         workspace = NSWorkspace.sharedWorkspace()
         for app in workspace.runningApplications():
@@ -271,7 +276,9 @@ class MacDesktopBackend(DesktopBackend):
 
     def wait_for_window(self, name: str = None, regex_name: str = None, timeout: int = 10) -> UIElement:
         import re
+        # pyrefly: ignore [missing-import]
         import atomacos
+        # pyrefly: ignore [missing-import]
         from Cocoa import NSWorkspace
         
         start_time = time.time()
@@ -326,6 +333,7 @@ class LinuxDesktopBackend(DesktopBackend):
         if window_name or regex_name:
             return self.wait_for_window(name=window_name, regex_name=regex_name)
             
+        # pyrefly: ignore [missing-import]
         import pyatspi
         registry = pyatspi.Registry
         desktop = registry.getDesktop(0)
@@ -337,6 +345,7 @@ class LinuxDesktopBackend(DesktopBackend):
         raise Exception("Failed to get application reference on Linux.")
 
     def get_window(self, name: str) -> UIElement:
+        # pyrefly: ignore [missing-import]
         import pyatspi
         registry = pyatspi.Registry
         desktop = registry.getDesktop(0)
@@ -348,6 +357,7 @@ class LinuxDesktopBackend(DesktopBackend):
 
     def wait_for_window(self, name: str = None, regex_name: str = None, timeout: int = 10) -> UIElement:
         import re
+        # pyrefly: ignore [missing-import]
         import pyatspi
         start_time = time.time()
         while time.time() - start_time < timeout:
@@ -375,6 +385,7 @@ class LinuxDesktopBackend(DesktopBackend):
         return self
 
     def drag_and_drop(self, source_element: UIElement, target_element: UIElement, move_speed: int = 1, wait_time: float = 0.5) -> 'LinuxDesktopBackend':
+        # pyrefly: ignore [missing-import]
         import pyatspi
         src_comp = source_element._backend._control.queryComponent()
         src_box = src_comp.getExtents(pyatspi.XY_SCREEN)
