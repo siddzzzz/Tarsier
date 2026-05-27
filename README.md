@@ -203,11 +203,11 @@ notepad.close()
 ```
 
 ### 5. Running the Autonomous Gemini Agent
-We provide a complete out-of-the-box autonomous agent in [gemini_agent.py](file:///e:/LLM%20vision/Tarsier/examples/gemini_agent.py). It uses your Gemini API key (loaded from your local `.env` file) to execute a dynamic planning loop. 
+We provide a complete out-of-the-box autonomous agent in [gemini_agent.py](examples/gemini_agent.py). It uses your Gemini API key (loaded from your local `.env` file) to execute a dynamic planning loop. 
 
 You can watch the agent's chain-of-thought, the tools it calls, and the outputs in real-time inside your terminal.
 
-Configure your [.env](file:///e:/LLM%20vision/Tarsier/.env) file:
+Configure your [.env](.env) file:
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
