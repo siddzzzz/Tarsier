@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tarsier-ai"
-version = "0.5.2"
+version = "0.6.0"
 authors = [
   { name="siddzzzz" }
 ]
@@ -21,6 +21,7 @@ classifiers = [
 dependencies = [
     "uiautomation>=2.0.29; sys_platform == 'win32'",
     "pyautogui>=0.9.54",
+    "pynput>=1.7.6",
     "mcp>=1.27.0",
     "playwright>=1.59.0",
     "atomacos>=0.1.1; sys_platform == 'darwin'",
