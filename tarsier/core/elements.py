@@ -58,6 +58,12 @@ class UIElementBackend:
     @property
     def role(self) -> str:
         raise NotImplementedError()
+    @property
+    def exists(self) -> bool:
+        raise NotImplementedError()
+    @property
+    def is_enabled(self) -> bool:
+        raise NotImplementedError()
     def click(self) -> 'UIElementBackend':
         raise NotImplementedError()
     def double_click(self) -> 'UIElementBackend':
@@ -114,6 +120,22 @@ class WindowsUIElement(UIElementBackend):
     def role(self) -> str:
         raw_role = self._control.ControlTypeName.replace("Control", "").lower()
         return ROLE_MAPPING.get(raw_role, raw_role)
+
+    @property
+    def exists(self) -> bool:
+        try:
+            if hasattr(self._control, 'Exists'):
+                return self._control.Exists(0, 0)
+            return True
+        except Exception:
+            return False
+
+    @property
+    def is_enabled(self) -> bool:
+        try:
+            return self._control.IsEnabled
+        except Exception:
+            return False
 
     def _highlight(self):
         if not getattr(self, 'highlight_actions', False):
@@ -511,6 +533,21 @@ class MacUIElement(UIElementBackend):
         el_role = getattr(self._control, 'AXRole', "unknown")
         return ROLE_MAPPING.get(el_role.lower(), el_role.replace("AX", "").lower())
 
+    @property
+    def exists(self) -> bool:
+        try:
+            _ = self._control.AXRole
+            return True
+        except Exception:
+            return False
+
+    @property
+    def is_enabled(self) -> bool:
+        try:
+            return getattr(self._control, 'AXEnabled', True)
+        except Exception:
+            return True
+
     def click(self) -> 'MacUIElement':
         try:
             self._control.press()
@@ -851,6 +888,24 @@ class LinuxUIElement(UIElementBackend):
     def role(self) -> str:
         role_name = self._control.getRoleName() or "unknown"
         return ROLE_MAPPING.get(role_name.lower(), role_name.replace(" ", "_").lower())
+
+    @property
+    def exists(self) -> bool:
+        try:
+            _ = self._control.getRoleName()
+            return True
+        except Exception:
+            return False
+
+    @property
+    def is_enabled(self) -> bool:
+        try:
+            # pyrefly: ignore [missing-import]
+            import pyatspi
+            state = self._control.getState()
+            return state.contains(pyatspi.STATE_ENABLED) and state.contains(pyatspi.STATE_SENSITIVE)
+        except Exception:
+            return False
 
     def click(self) -> 'LinuxUIElement':
         try:
@@ -1197,6 +1252,14 @@ class UIElement:
     def role(self) -> str:
         return self._backend.role
 
+    @property
+    def exists(self) -> bool:
+        return self._backend.exists
+
+    @property
+    def is_enabled(self) -> bool:
+        return self._backend.is_enabled
+
     def click(self) -> 'UIElement':
         self._backend.click()
         return self
@@ -1269,6 +1332,93 @@ class UIElement:
     def wait_until_clickable(self, timeout: int = 10) -> 'UIElement':
         self._backend.wait_until_clickable(timeout)
         return self
+
+    def wait_until_gone(self, role: Optional[str] = None, name: Optional[str] = None, regex_name: Optional[str] = None, timeout: int = 10) -> bool:
+        import time
+        start_time = time.time()
+        if role or name or regex_name:
+            while time.time() - start_time < timeout:
+                try:
+                    self.find(role=role, name=name, regex_name=regex_name)
+                    time.sleep(0.5)
+                except ValueError:
+                    return True
+            raise TimeoutError(f"Timed out waiting for element with name='{name}', regex_name='{regex_name}', role='{role}' to disappear after {timeout} seconds")
+        else:
+            while time.time() - start_time < timeout:
+                if not self.exists:
+                    return True
+                time.sleep(0.5)
+            raise TimeoutError(f"Timed out waiting for element '{self.role}:{self.name}' to disappear after {timeout} seconds")
+
+    def wait_until_text_contains(self, text: str, role: Optional[str] = None, name: Optional[str] = None, regex_name: Optional[str] = None, timeout: int = 10) -> 'UIElement':
+        import time
+        start_time = time.time()
+        if role or name or regex_name:
+            while time.time() - start_time < timeout:
+                try:
+                    elem = self.find(role=role, name=name, regex_name=regex_name)
+                    if text in elem.read():
+                        return elem
+                except Exception:
+                    pass
+                time.sleep(0.5)
+            raise TimeoutError(f"Timed out waiting for element with name='{name}', regex_name='{regex_name}', role='{role}' to contain text '{text}' after {timeout} seconds")
+        else:
+            while time.time() - start_time < timeout:
+                try:
+                    if text in self.read():
+                        return self
+                except Exception:
+                    pass
+                time.sleep(0.5)
+            raise TimeoutError(f"Timed out waiting for element '{self.role}:{self.name}' to contain text '{text}' after {timeout} seconds")
+
+    def wait_until_enabled(self, role: Optional[str] = None, name: Optional[str] = None, regex_name: Optional[str] = None, timeout: int = 10) -> 'UIElement':
+        import time
+        start_time = time.time()
+        if role or name or regex_name:
+            while time.time() - start_time < timeout:
+                try:
+                    elem = self.find(role=role, name=name, regex_name=regex_name)
+                    if elem.is_enabled:
+                        return elem
+                except Exception:
+                    pass
+                time.sleep(0.5)
+            raise TimeoutError(f"Timed out waiting for element with name='{name}', regex_name='{regex_name}', role='{role}' to become enabled after {timeout} seconds")
+        else:
+            while time.time() - start_time < timeout:
+                try:
+                    if self.is_enabled:
+                        return self
+                except Exception:
+                    pass
+                time.sleep(0.5)
+            raise TimeoutError(f"Timed out waiting for element '{self.role}:{self.name}' to become enabled after {timeout} seconds")
+
+    def wait_until_disabled(self, role: Optional[str] = None, name: Optional[str] = None, regex_name: Optional[str] = None, timeout: int = 10) -> 'UIElement':
+        import time
+        start_time = time.time()
+        if role or name or regex_name:
+            while time.time() - start_time < timeout:
+                try:
+                    elem = self.find(role=role, name=name, regex_name=regex_name)
+                    if not elem.is_enabled:
+                        return elem
+                except Exception:
+                    pass
+                time.sleep(0.5)
+            raise TimeoutError(f"Timed out waiting for element with name='{name}', regex_name='{regex_name}', role='{role}' to become disabled after {timeout} seconds")
+        else:
+            while time.time() - start_time < timeout:
+                try:
+                    if not self.is_enabled:
+                        return self
+                except Exception:
+                    pass
+                time.sleep(0.5)
+            raise TimeoutError(f"Timed out waiting for element '{self.role}:{self.name}' to become disabled after {timeout} seconds")
 
     def button(self, name: str) -> 'UIElement':
         return self.find(role="button", name=name)
