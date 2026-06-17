@@ -148,6 +148,25 @@ class WindowsUIElement(UIElementBackend):
 
     def click(self) -> 'WindowsUIElement':
         self._highlight()
+        try:
+            if hasattr(self._control, 'GetInvokePattern'):
+                pattern = self._control.GetInvokePattern()
+                if pattern:
+                    pattern.Invoke()
+                    return self
+            if hasattr(self._control, 'GetTogglePattern'):
+                pattern = self._control.GetTogglePattern()
+                if pattern:
+                    pattern.Toggle()
+                    return self
+            if hasattr(self._control, 'GetSelectionItemPattern'):
+                pattern = self._control.GetSelectionItemPattern()
+                if pattern:
+                    pattern.Select()
+                    return self
+        except Exception:
+            pass
+            
         self._control.Click()
         return self
     
@@ -255,6 +274,16 @@ class WindowsUIElement(UIElementBackend):
         return self
 
     def type(self, text: str, waitTime: float = 0.05) -> 'WindowsUIElement':
+        self._highlight()
+        try:
+            if hasattr(self._control, 'GetValuePattern'):
+                pattern = self._control.GetValuePattern()
+                if pattern:
+                    pattern.SetValue(text)
+                    return self
+        except Exception:
+            pass
+            
         import uiautomation as auto
         auto.SetClipboardText(text)
         self.focus()
