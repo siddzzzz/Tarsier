@@ -48,6 +48,8 @@ PUBLISHING.md
 handoff.md
 examples/test_install.py
 examples/tarsier_demo_dest/
+examples/agent_system_prompt_demo.py
+examples/tarsier_gemini_agent.py
 #temp
 paper/
 scratch/
